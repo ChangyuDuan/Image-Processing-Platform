@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 视觉平台 - 模式选择</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0071e3;
+            --primary-hover: #0077ed;
+            --bg-color: #fbfbfd;
+            --text-primary: #1d1d1f;
+            --text-secondary: #86868b;
+            --glass-backdrop: blur(25px) saturate(180%);
+            --border-radius-lg: 24px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background-color: #f0f2f5;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(255, 107, 107, 0.4) 0px, transparent 50%),
+                radial-gradient(at 98% 1%, rgba(78, 205, 196, 0.4) 0px, transparent 50%),
+                radial-gradient(at 5% 95%, rgba(85, 98, 237, 0.4) 0px, transparent 50%),
+                radial-gradient(at 96% 93%, rgba(255, 209, 102, 0.4) 0px, transparent 50%);
+            background-attachment: fixed;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .selection-container {
+            max-width: 1000px;
+            width: 90%;
+            margin: 0 auto;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .welcome-header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeInDown 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+            padding: 40px;
+            border-radius: var(--border-radius-lg);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: default;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .welcome-header:hover {
+            transform: scale(1.02);
+            background: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.05);
+            border-color: rgba(255,255,255,0.6);
+        }
+
+        .emoji-header { font-size: 64px; margin-bottom: 20px; display: inline-block; transition: transform 0.4s; }
+        .welcome-header:hover .emoji-header { transform: scale(1.2) rotate(15deg); }
+
+        .welcome-title {
+            font-size: 56px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #1d1d1f 0%, #434344 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .welcome-header:hover .welcome-title {
+            background-image: linear-gradient(135deg, #0071e3 0%, #00c6ff 100%);
+            transform: translateY(-2px);
+            text-shadow: 0 10px 30px rgba(0, 113, 227, 0.2);
+        }
+
+        .welcome-subtitle {
+            font-size: 22px;
+            color: var(--text-secondary);
+            font-weight: 400;
+            transition: color 0.3s ease;
+        }
+
+        .welcome-header:hover .welcome-subtitle {
+            color: var(--text-primary);
+        }
+
+        .mode-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        .mode-card {
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: var(--glass-backdrop);
+            -webkit-backdrop-filter: var(--glass-backdrop);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 32px;
+            padding: 60px 40px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+
+        .mode-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .mode-card:hover {
+            transform: translateY(-12px) scale(1.02);
+            background: rgba(255, 255, 255, 0.45);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.12);
+            border-color: var(--primary-color);
+        }
+
+        .mode-card:hover::before {
+            opacity: 1;
+        }
+
+        .mode-emoji {
+            font-size: 80px;
+            margin-bottom: 30px;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.1));
+        }
+
+        .mode-card:hover .mode-emoji {
+            transform: scale(1.2) rotate(8deg);
+            filter: drop-shadow(0 15px 30px rgba(0,113,227,0.3));
+        }
+
+        .mode-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+            transition: color 0.3s ease;
+        }
+
+        .mode-card:hover .mode-title {
+            color: var(--primary-color);
+        }
+
+        .mode-desc {
+            font-size: 16px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            max-width: 300px;
+            margin-bottom: 24px;
+            transition: color 0.3s ease;
+        }
+        
+        .mode-card:hover .mode-desc {
+            color: var(--text-primary);
+        }
+
+        .mode-features {
+            display: flex;
+            gap: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary-color);
+            background: rgba(0, 113, 227, 0.08);
+            padding: 8px 16px;
+            border-radius: 20px;
+            opacity: 0.8;
+            transition: all 0.3s;
+        }
+
+        .mode-card:hover .mode-features {
+            opacity: 1;
+            background: rgba(0, 113, 227, 0.15);
+            transform: scale(1.05);
+        }
+
+        .trivia-footer {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            padding: 20px 40px;
+            width: auto;
+            max-width: 800px;
+            color: var(--text-secondary);
+            font-size: 15px;
+            background: rgba(255,255,255,0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid rgba(255,255,255,0.4);
+            animation: fadeInUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s backwards;
+        }
+
+        .trivia-footer:hover {
+            background: rgba(255,255,255,0.5);
+            transform: translateX(-50%) translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+
+        .emoji-floater {
+            position: fixed;
+            bottom: -50px;
+            font-size: 24px;
+            animation: floatUp linear infinite;
+            z-index: 1;
+            opacity: 0.4;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.4; }
+            90% { opacity: 0.4; }
+            100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-anim-1 { animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s backwards; }
+        .card-anim-2 { animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s backwards; }
+    </style>
+</head>
+<body>
+    <div class="selection-container">
+        <header class="welcome-header">
+            <div class="emoji-header">✨</div>
+            <h1 class="welcome-title">AI 视觉智能分析平台</h1>
+            <p class="welcome-subtitle">请选择您需要的分析模式，开启数据洞察之旅</p>
+        </header>
+
+        <div class="mode-grid">
+            <a href="/micro" class="mode-card card-anim-1">
+                <div class="mode-emoji">🔬</div>
+                <h2 class="mode-title">微观 · 单图透视</h2>
+                <p class="mode-desc">深度挖掘单张图片的视觉基因，从颜色分布、纹理细节到几何特征全方位透析。</p>
+                <div class="mode-features">
+                    <span>🎨 色彩基因</span>
+                    <span>🧬 纹理识别</span>
+                    <span>📐 几何测量</span>
+                </div>
+            </a>
+
+            <a href="/macro" class="mode-card card-anim-2">
+                <div class="mode-emoji">📊</div>
+                <h2 class="mode-title">宏观 · 数据集全览</h2>
+                <p class="mode-desc">全局掌控数据集质量健康度，智能分析数据分布合理性、纯净度与异常样本。</p>
+                <div class="mode-features">
+                    <span>🚨 异常检测</span>
+                    <span>🌌 多样性分布</span>
+                    <span>⚖️ 完整性体检</span>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <div class="trivia-footer" onclick="refreshTrivia()">
+        💡 <strong>你知道吗？</strong> <span id="triviaText">加载中...</span>
+    </div>
+
+    <script>
+        const trivias = [
+            "人眼能分辨约 1000 万种颜色，而普通的 24 位色深图片包含 1677 万种颜色。",
+            "第一张数码照片诞生于 1957 年，比数码相机发明还早 20 年。",
+            "JPEG 压缩算法会丢弃人眼不敏感的高频色彩信息，从而大幅减小体积。",
+            "著名的 'Lenna' 测试图截取自 1972 年的《花花公子》杂志。",
+            "计算机视觉中的 RGB 颜色模型是加色模式，类似于光的混合。",
+            "直方图均衡化可以增强图片的对比度，让细节更清晰。",
+            "PNG 格式支持透明通道 (Alpha Channel)，而 JPG 不支持。",
+            "纹理特征分析中的 GLCM 代表灰度共生矩阵。",
+            "卷积神经网络（CNN）的灵感来源于猫脑视觉皮层的神经元结构。"
+        ];
+
+        function refreshTrivia() {
+            const text = trivias[Math.floor(Math.random() * trivias.length)];
+            const el = document.getElementById('triviaText');
+            el.style.opacity = 0;
+            setTimeout(() => {
+                el.textContent = text;
+                el.style.opacity = 1;
+            }, 300);
+        }
+
+        refreshTrivia();
+
+        const emojis = ['🎨', '🌈', '👁️', '📷', '✨', '🧬', '🎲', '💡', '📐', '🖼️'];
+        function createFloater() {
+            const floater = document.createElement('div');
+            floater.className = 'emoji-floater';
+            floater.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            floater.style.left = `${Math.random() * 100}vw`;
+            const duration = 15 + Math.random() * 20;
+            floater.style.animationDuration = `${duration}s`;
+            document.body.appendChild(floater);
+            setTimeout(() => floater.remove(), duration * 1000);
+        }
+        setInterval(createFloater, 2000);
+    </script>
+</body>
+</html>

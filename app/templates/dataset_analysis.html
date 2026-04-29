@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宏观 · 数据集全览</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        /* 复用 index.html 的核心样式，保持风格一致 */
+        :root {
+            --primary-color: #0071e3;
+            --primary-hover: #0077ed;
+            --bg-color: #fbfbfd;
+            --text-primary: #1d1d1f;
+            --text-secondary: #86868b;
+            --border-radius-lg: 24px;
+            --border-radius-md: 16px;
+            --shadow-soft: 0 4px 24px rgba(48, 12, 12, 0.04);
+            --shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.08);
+            --glass-backdrop: blur(20px) saturate(180%);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f2f5;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(255, 107, 107, 0.6) 0px, transparent 50%),
+                radial-gradient(at 98% 1%, rgba(78, 205, 196, 0.6) 0px, transparent 50%),
+                radial-gradient(at 5% 95%, rgba(85, 98, 237, 0.6) 0px, transparent 50%),
+                radial-gradient(at 96% 93%, rgba(255, 209, 102, 0.6) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(255, 255, 255, 0.2) 0px, transparent 50%);
+            background-attachment: fixed;
+            background-size: 100% 100%;
+            overflow-x: hidden;
+        }
+
+        .main-container {
+            max-width: 1400px;
+            width: 95%;
+            margin: 0 auto;
+            padding: 40px 20px;
+            flex: 1;
+        }
+
+        .btn-back {
+            position: fixed;
+            top: 24px;
+            left: 24px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 99px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.8);
+            transform: translateX(4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            color: var(--primary-color);
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+            padding: 20px;
+            border-radius: var(--border-radius-lg);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .page-header:hover {
+            transform: scale(1.02);
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+        }
+
+        .emoji-header { font-size: 64px; margin-bottom: 20px; display: inline-block; transition: transform 0.4s; }
+        .page-header:hover .emoji-header { transform: scale(1.2) rotate(15deg); }
+        
+        .page-title {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #1d1d1f 0%, #434344 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .page-subtitle {
+            font-size: 20px;
+            color: var(--text-secondary);
+            font-weight: 400;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        .upload-card {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: var(--glass-backdrop);
+            -webkit-backdrop-filter: var(--glass-backdrop);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: var(--border-radius-lg);
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: var(--shadow-soft);
+            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .upload-card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-4px);
+        }
+
+        .drag-area {
+            border: 2px dashed rgba(255, 255, 255, 0.6);
+            border-radius: var(--border-radius-md);
+            padding: 60px 40px;
+            text-align: center;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        .drag-area:hover { background: rgba(255, 255, 255, 0.4); border-color: #fff; transform: scale(0.99); }
+
+        .btn-custom {
+            border: none; border-radius: 980px; padding: 12px 28px; font-weight: 600; cursor: pointer; transition: all 0.3s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .btn-custom:hover { transform: translateY(-2px) scale(1.02); }
+        
+        .btn-primary-apple {
+            background: var(--primary-color); color: white; box-shadow: 0 4px 14px rgba(0, 113, 227, 0.3);
+        }
+        .btn-primary-apple:hover:not(:disabled) {
+            background: var(--primary-hover); 
+        }
+        .btn-primary-apple:disabled { background: #e5e5ea; cursor: not-allowed; box-shadow: none; transform: none; }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius-md);
+            padding: 24px;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 1px solid rgba(255,255,255,0.4);
+            cursor: pointer;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px) scale(1.03);
+            background: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+        }
+
+        .feature-icon { font-size: 40px; margin-bottom: 16px; display: inline-block; transition: transform 0.3s; }
+        .feature-card:hover .feature-icon { transform: rotateY(180deg); }
+        .feature-title { font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
+        .feature-desc { font-size: 13px; color: var(--text-secondary); }
+
+        .emoji-floater {
+            position: fixed;
+            bottom: -50px;
+            font-size: 24px;
+            animation: floatUp linear infinite;
+            z-index: -1;
+            opacity: 0.6;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.6; }
+            100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
+        }
+
+        .report-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+            display: none; /* 初始隐藏 */
+            animation: slideUpFade 0.6s ease;
+        }
+
+        .chart-card {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 24px;
+            border: 1px solid rgba(255,255,255,0.5);
+            box-shadow: var(--shadow-soft);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .chart-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        .card-title {
+            font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
+        }
+        
+        .card-title span { transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); display: inline-block; }
+        .chart-card:hover .card-title span { transform: scale(1.2) rotate(10deg); }
+
+        .score-card {
+            grid-column: span 3;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.3) 100%);
+        }
+
+        .total-score {
+            font-size: 64px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #0071e3 0%, #00c6ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+            margin: 10px 0;
+        }
+
+        .chart-container { width: 100%; height: 300px; }
+        
+        /* 维度评分条 */
+        .dimension-row {
+            display: flex; align-items: center; margin-bottom: 12px; width: 100%;
+        }
+        .dim-label { width: 80px; font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+        .dim-bar-bg { flex: 1; height: 8px; background: rgba(0,0,0,0.05); border-radius: 4px; overflow: hidden; }
+        .dim-bar-fill { height: 100%; background: var(--primary-color); border-radius: 4px; width: 0; transition: width 1s ease; }
+        .dim-val { width: 40px; text-align: right; font-weight: 700; font-size: 14px; }
+
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.5); backdrop-filter: blur(20px);
+            display: none; justify-content: center; align-items: center; z-index: 999;
+            flex-direction: column;
+        }
+
+        .table-responsive {
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .table thead th {
+            background: rgba(255,255,255,0.5);
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            padding: 16px;
+        }
+        .table tbody td {
+            background: rgba(255,255,255,0.2);
+            padding: 16px;
+            vertical-align: middle;
+        }
+
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .anomaly-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: rgba(255,59,48,0.1);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            color: #ff3b30;
+        }
+
+        /* 总结报告表格样式 (复用 index.html) */
+        .table-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(25px) saturate(180%);
+            border-radius: var(--border-radius-lg);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            overflow: hidden;
+            margin-top: 40px;
+        }
+
+        .table-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .report-main-title {
+            font-size: 24px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .report-title-emoji {
+            font-size: 32px;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .table-card:hover .report-title-emoji {
+            transform: scale(1.2) rotate(-10deg);
+        }
+
+        .report-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            padding: 4px;
+            background: rgba(118, 118, 128, 0.12);
+            border-radius: 12px;
+            width: fit-content;
+        }
+
+        .report-tab {
+            padding: 8px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .report-tab:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .report-tab.active {
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+            font-weight: 600;
+        }
+
+        .report-tab-emoji { font-size: 16px; }
+
+        .report-section {
+            animation: fadeIn 0.4s ease;
+            display: none;
+        }
+        
+        .report-section.active-section {
+            display: block;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .report-table th {
+            text-align: left;
+            padding: 12px 16px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .report-table td {
+            padding: 16px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+            font-size: 15px;
+            color: var(--text-primary);
+            vertical-align: middle;
+        }
+
+        .report-table tr:last-child td { border-bottom: none; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <a href="/" class="btn-back"><span>🔙</span> 返回首页</a>
+
+        <header class="page-header">
+            <div class="emoji-header">📊</div>
+            <h1 class="page-title">宏观 · 数据集全览</h1>
+            <p class="page-subtitle" id="typingSubtitle"></p>
+        </header>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">👁️</div>
+                <div class="feature-title">全景透视</div>
+                <div class="feature-desc">一键扫描海量图片，智能分析数据分布合理性</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔍</div>
+                <div class="feature-title">智能侦探</div>
+                <div class="feature-desc">自动揪出模糊、重复及异常样本，净化数据集</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🌌</div>
+                <div class="feature-title">多维图谱</div>
+                <div class="feature-desc">构建高维特征空间，可视化呈现数据多样性分布</div>
+            </div>
+        </div>
+
+        <div class="upload-card">
+            <div class="drag-area" id="dragArea">
+                <div class="drag-icon-wrapper" id="dragIcon" style="font-size: 48px; margin-bottom: 16px; transition: transform 0.3s;">📦</div>
+                <div class="drag-text" id="dragText" style="font-weight: 600; font-size: 18px; margin-bottom: 8px;">点击或拖拽文件夹/压缩包</div>
+                <div class="drag-subtext" style="color: var(--text-secondary); font-size: 14px;">仅支持上传文件夹或 ZIP 压缩包进行全览分析</div>
+                <input type="file" id="fileInput" multiple accept=".zip" style="display: none;">
+                <input type="file" id="folderInput" webkitdirectory directory style="display: none;">
+            </div>
+            <div class="d-flex justify-content-center gap-3 mt-4">
+                <button class="btn-custom btn-primary-apple" onclick="document.getElementById('fileInput').click()">
+                    <span>📦</span> 选择压缩包 (ZIP)
+                </button>
+                <button class="btn-custom btn-primary-apple" style="background: rgba(255,255,255,0.6); color: #333; border: 1px solid rgba(0,0,0,0.1); backdrop-filter: blur(5px);" onclick="document.getElementById('folderInput').click()">
+                    <span>📂</span> 选择文件夹
+                </button>
+            </div>
+            <div class="text-center mt-5">
+                <button class="btn-custom btn-primary-apple" id="startBtn" disabled style="width: 200px; justify-content: center; margin: 0 auto;">
+                    开始全览分析 <span>🚀</span>
+                </button>
+            </div>
+            <div id="fileInfo" class="text-center mt-3 text-muted" style="font-size: 14px; font-weight: 500; transition: all 0.3s;"></div>
+        </div>
+
+        <!-- 结果展示区域 (初始隐藏) -->
+        <div id="resultContainer" style="display: none;">
+            <!-- 数据集信息栏 -->
+            <div class="table-card p-4 mb-4" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h4 style="margin: 0; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 32px;">📂</span> 
+                        <span id="datasetName">Dataset_Analysis</span>
+                    </h4>
+                    <p style="margin: 4px 0 0 48px; color: var(--text-secondary); font-size: 14px;">
+                        共分析 <span id="totalImages" style="color: var(--primary-color); font-weight: 700;">0</span> 张图片
+                    </p>
+                </div>
+                <div style="display: flex; gap: 16px;">
+                    <button class="btn-custom btn-primary-apple" id="toggleDetailBtn" style="background: rgba(0,113,227,0.1); color: var(--primary-color);">
+                        <span>👁️</span> 查看详情
+                    </button>
+                    <button class="btn-custom btn-primary-apple" id="exportPdfBtn">
+                        <span>📥</span> 导出报告
+                    </button>
+                </div>
+            </div>
+
+            <div class="report-grid" id="reportGrid" style="display: none;">
+                <!-- 1. 评分卡片 -->
+                <div class="chart-card score-card">
+                    <div class="card-title" style="display:none;"></div>
+                    <div class="text-muted" style="font-weight: 600; text-transform: uppercase; font-size: 12px;">数据集健康指数</div>
+                    <div class="total-score" id="healthScore">0</div>
+                    <div style="width: 100%; padding: 0 20px;">
+                        <div class="dimension-row">
+                            <div class="dim-label">完整性</div>
+                            <div class="dim-bar-bg"><div class="dim-bar-fill" id="barIntegrity"></div></div>
+                            <div class="dim-val" id="valIntegrity">0</div>
+                        </div>
+                        <div class="dimension-row">
+                            <div class="dim-label">纯净度</div>
+                            <div class="dim-bar-bg"><div class="dim-bar-fill" id="barPurity"></div></div>
+                            <div class="dim-val" id="valPurity">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. 完整性概览 -->
+                <div class="chart-card" style="grid-column: span 5;">
+                    <div class="card-title"><span style="font-size: 24px; transition: transform 0.3s;">💾</span> 数据完整性 (Integrity)</div>
+                    <div id="integrityChart" class="chart-container" style="height: 220px;"></div>
+                </div>
+
+                <!-- 3. 异常检测 -->
+                <div class="chart-card" style="grid-column: span 4;">
+                    <div class="card-title"><span style="font-size: 24px; transition: transform 0.3s;">🚨</span> 异常检测 (Anomaly)</div>
+                    <div id="anomalyChart" class="chart-container" style="height: 220px;"></div>
+                </div>
+
+                <!-- 4.1 合理性分布 (亮度) -->
+                <div class="chart-card" style="grid-column: span 6;">
+                    <div class="card-title"><span style="font-size: 24px; transition: transform 0.3s;">☀️</span> 亮度分布趋势 (Brightness)</div>
+                    <div id="brightnessChart" class="chart-container"></div>
+                </div>
+
+                <!-- 4.2 合理性分布 (宽高比) -->
+                <div class="chart-card" style="grid-column: span 6;">
+                    <div class="card-title"><span style="font-size: 24px; transition: transform 0.3s;">📐</span> 宽高比一致性 (Aspect Ratio)</div>
+                    <div id="aspectRatioChart" class="chart-container"></div>
+                </div>
+
+                <!-- 4.3 尺寸统计 (长宽) -->
+                <div class="chart-card" style="grid-column: span 12;">
+                    <div class="card-title"><span style="font-size: 24px; transition: transform 0.3s;">📏</span> 图像尺寸统计 (Average Size)</div>
+                    <div id="sizeChart" class="chart-container"></div>
+                </div>
+
+                <!-- 5. 纯净度与重复 -->
+                <div class="chart-card" style="grid-column: span 12;">
+                    <div class="card-title"><span style="font-size: 24px; transition: transform 0.3s;">🧬</span> 重复图片检测 (Purity)</div>
+                    <div id="purityChart" class="chart-container"></div>
+                </div>
+
+                <!-- 6. 多样性 -->
+                <div class="chart-card" style="grid-column: span 12;">
+                    <div class="card-title"><span style="font-size: 24px; transition: transform 0.3s;">🌌</span> 数据多样性空间 (Diversity)</div>
+                    <div id="diversityChart" class="chart-container" style="height: 500px;"></div>
+                </div>
+            </div>
+            
+            <!-- 总结报告表格 -->
+            <div class="table-card p-4 mt-4" id="reportTableCard" style="display: none;">
+                <h4 class="mb-4 fw-bold report-main-title">
+                    <span class="report-title-emoji">📑</span> 数据集深度诊断报告
+                </h4>
+                
+                <div class="report-tabs">
+                    <div class="report-tab active" onclick="switchReportTab('integrity')">
+                        <span class="report-tab-emoji">💾</span> 完整性
+                    </div>
+                    <div class="report-tab" onclick="switchReportTab('rationality')">
+                        <span class="report-tab-emoji">⚖️</span> 合理性
+                    </div>
+                    <div class="report-tab" onclick="switchReportTab('purity')">
+                        <span class="report-tab-emoji">🧬</span> 纯净度
+                    </div>
+                    <div class="report-tab" onclick="switchReportTab('anomaly')">
+                        <span class="report-tab-emoji">🚨</span> 异常检测
+                    </div>
+                    <div class="report-tab" onclick="switchReportTab('diversity')">
+                        <span class="report-tab-emoji">🌌</span> 多样性
+                    </div>
+                </div>
+
+                <div id="report-integrity" class="report-section active-section">
+                    <table class="report-table" id="tableIntegrity">
+                        <thead><tr><th style="width: 30%">指标</th><th style="width: 20%">数值</th><th style="width: 50%">说明</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div id="report-rationality" class="report-section">
+                    <table class="report-table" id="tableRationality">
+                        <thead><tr><th style="width: 30%">指标</th><th style="width: 20%">数值</th><th style="width: 50%">说明</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div id="report-purity" class="report-section">
+                    <table class="report-table" id="tablePurity">
+                        <thead><tr><th style="width: 30%">指标</th><th style="width: 20%">数值</th><th style="width: 50%">说明</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div id="report-anomaly" class="report-section">
+                    <table class="report-table" id="tableAnomaly">
+                        <thead><tr><th style="width: 30%">指标</th><th style="width: 20%">数值</th><th style="width: 50%">说明</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div id="report-diversity" class="report-section">
+                    <table class="report-table" id="tableDiversity">
+                        <thead><tr><th style="width: 30%">指标</th><th style="width: 20%">数值</th><th style="width: 50%">说明</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="loading-overlay" id="loading">
+        <div class="loader-container" style="text-align: center; width: 300px;">
+            <div class="track-container" style="width: 100%; height: 12px; background: linear-gradient(90deg, #ff9a9e 0%, #fad0c4 20%, #fbc2eb 40%, #a18cd1 60%, #a6c0fe 80%, #84fab0 100%); border-radius: 10px; margin-bottom: 24px; position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.1) inset;">
+                <div class="runner-wrapper" style="position: absolute; top: -42px; left: 0; width: 48px; height: 48px; animation: runLoop 4s linear infinite;">
+                    <div class="loader-emoji" style="font-size: 48px; display: block; line-height: 1;">🏃‍♂️</div>
+                </div>
+            </div>
+            <h5 style="font-weight: 600; color: var(--text-primary); margin-top: 10px;">正在深入分析...</h5>
+            <p style="color: var(--text-secondary); font-size: 14px;">AI 正在全景扫描数据分布与异常特征</p>
+        </div>
+    </div>
+
+    <style>
+        @keyframes runLoop {
+            0% { left: 0; transform: translateX(0) scaleX(-1); }
+            45% { left: calc(100% - 48px); transform: translateX(0) scaleX(-1); }
+            50% { left: calc(100% - 48px); transform: translateX(0) scaleX(1); }
+            95% { left: 0; transform: translateX(0) scaleX(1); }
+            100% { left: 0; transform: translateX(0) scaleX(-1); }
+        }
+    </style>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const folderInput = document.getElementById('folderInput');
+        const startBtn = document.getElementById('startBtn');
+        const fileInfo = document.getElementById('fileInfo');
+        const dragArea = document.getElementById('dragArea');
+        const dragIcon = document.getElementById('dragIcon');
+        const dragText = document.getElementById('dragText');
+        
+        let selectedFiles = [];
+
+        // 交互增强
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dragArea.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dragArea.style.background = 'rgba(255,255,255,0.6)';
+                dragArea.style.borderColor = 'var(--primary-color)';
+                dragArea.style.transform = 'scale(0.99)';
+                dragIcon.textContent = '📂';
+                dragIcon.style.transform = 'scale(1.2)';
+                dragText.textContent = '释放以添加文件';
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dragArea.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dragArea.style.background = 'rgba(255,255,255,0.3)';
+                dragArea.style.borderColor = 'rgba(255,255,255,0.6)';
+                dragArea.style.transform = 'scale(1)';
+                dragIcon.textContent = '📦';
+                dragIcon.style.transform = 'scale(1)';
+                dragText.textContent = '点击或拖拽文件夹/压缩包';
+            });
+        });
+
+        dragArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            handleFiles(e.dataTransfer.files);
+        });
+        
+        dragArea.addEventListener('click', (e) => {
+            if(e.target === dragArea || e.target === dragIcon || e.target === dragText) {
+                fileInput.click();
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        folderInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function handleFiles(files) {
+            selectedFiles = Array.from(files);
+            if (selectedFiles.length > 0) {
+                fileInfo.textContent = `已选择 ${selectedFiles.length} 个文件`;
+                fileInfo.style.color = 'var(--primary-color)';
+                fileInfo.style.fontWeight = '700';
+                startBtn.disabled = false;
+                
+                // 成功动画
+                dragIcon.textContent = '🎉';
+                dragIcon.style.transform = 'scale(1.2) rotate(15deg)';
+                setTimeout(() => {
+                    dragIcon.textContent = '📦';
+                    dragIcon.style.transform = 'scale(1)';
+                }, 1500);
+            }
+        }
+
+        // 打字机特效
+        const text = "全局掌控数据分布、纯净度与异常检测，为您的数据集提供深度体检报告。";
+        const subtitleEl = document.getElementById('typingSubtitle');
+        let i = 0;
+        function typeWriter() {
+            if (i < text.length) {
+                subtitleEl.innerHTML += text.charAt(i);
+                i++;
+                setTimeout(typeWriter, 50);
+            }
+        }
+        setTimeout(typeWriter, 500);
+
+        // 背景 Emoji 漂浮
+        const emojis = ['📊', '📈', '📉', '🧬', '🔍', '⚖️', '🚨', '🌌', '👁️', '📦'];
+        function createFloater() {
+            const floater = document.createElement('div');
+            floater.className = 'emoji-floater';
+            floater.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            floater.style.left = `${Math.random() * 100}vw`;
+            const duration = 15 + Math.random() * 20;
+            floater.style.animationDuration = `${duration}s`;
+            document.body.appendChild(floater);
+            setTimeout(() => floater.remove(), duration * 1000);
+        }
+        setInterval(createFloater, 2000);
+
+        startBtn.addEventListener('click', async () => {
+            document.getElementById('loading').style.display = 'flex';
+            const formData = new FormData();
+            selectedFiles.forEach(f => formData.append('files', f));
+
+            try {
+                const res = await fetch('/analyze/dataset', { method: 'POST', body: formData });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.message || err.detail || 'Server Error');
+                }
+                const data = await res.json();
+                if (!data.summary) {
+                    throw new Error('返回数据格式异常: 缺少 summary 字段');
+                }
+                renderDashboard(data);
+            } catch (e) {
+                console.error(e);
+                alert('分析失败: ' + e.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+
+        function renderDashboard(data) {
+            document.getElementById('resultContainer').style.display = 'block';
+            document.getElementById('totalImages').textContent = data.total_files;
+            document.getElementById('datasetName').textContent = selectedFiles[0]?.name || 'Dataset';
+            
+            // 初始折叠详情
+            const reportGrid = document.getElementById('reportGrid');
+            const reportTableCard = document.getElementById('reportTableCard');
+            reportGrid.style.display = 'none';
+            reportTableCard.style.display = 'none';
+            
+            // 绑定折叠按钮
+            const toggleBtn = document.getElementById('toggleDetailBtn');
+            toggleBtn.onclick = () => {
+                const isHidden = reportGrid.style.display === 'none';
+                reportGrid.style.display = isHidden ? 'grid' : 'none';
+                reportTableCard.style.display = isHidden ? 'block' : 'none';
+                toggleBtn.innerHTML = isHidden ? '<span>👁️</span> 收起详情' : '<span>👁️</span> 查看详情';
+                // 重新调整图表大小
+                if(isHidden) {
+                    setTimeout(() => {
+                        window.dispatchEvent(new Event('resize'));
+                    }, 100);
+                }
+            };
+
+            // 1. 评分渲染
+            const health = Math.round((data.summary.integrity.score + data.summary.purity.score) / 2);
+            animateValue('healthScore', 0, health, 1000);
+            animateBar('barIntegrity', 'valIntegrity', data.summary.integrity.score);
+            animateBar('barPurity', 'valPurity', data.summary.purity.score);
+
+            // 渲染总结表格数据
+            renderSummaryTable(data.summary);
+
+            // 2. 完整性饼图
+            const chartIntegrity = echarts.init(document.getElementById('integrityChart'));
+            chartIntegrity.setOption({
+                tooltip: { trigger: 'item' },
+                series: [{
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    data: [
+                        { value: data.summary.integrity.valid_count, name: '有效图片', itemStyle: { color: '#34c759' } },
+                        { value: data.summary.integrity.error_count, name: '损坏/无效', itemStyle: { color: '#ff3b30' } }
+                    ]
+                }]
+            });
+
+            // 3. 异常检测 (增强空状态展示)
+            const chartAnomaly = echarts.init(document.getElementById('anomalyChart'));
+            const anomalyItems = data.summary.anomaly.items;
+            if (anomalyItems.length === 0) {
+                // 无异常展示全绿饼图
+                chartAnomaly.setOption({
+                    title: { text: '✅ 无异常', left: 'center', top: 'center', textStyle: { color: '#34c759' } },
+                    series: [{
+                        type: 'pie', radius: ['60%', '70%'],
+                        data: [{ value: 1, itemStyle: { color: '#34c759' }, name: '健康' }]
+                    }]
+                });
+            } else {
+                // 有异常展示柱状统计
+                const issuesCount = {};
+                anomalyItems.forEach(item => {
+                    item.issues.forEach(issue => issuesCount[issue] = (issuesCount[issue] || 0) + 1);
+                });
+                chartAnomaly.setOption({
+                    tooltip: { trigger: 'axis' },
+                    xAxis: { type: 'category', data: Object.keys(issuesCount) },
+                    yAxis: { type: 'value' },
+                    series: [{
+                        type: 'bar',
+                        data: Object.values(issuesCount),
+                        itemStyle: { color: '#ff3b30', borderRadius: [4, 4, 0, 0] }
+                    }]
+                });
+            }
+
+            // 4.1 亮度直方图
+            const chartBrightness = echarts.init(document.getElementById('brightnessChart'));
+            chartBrightness.setOption({
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'category', data: ['极暗', '暗', '中暗', '中', '中亮', '亮', '极亮'], name: '亮度区间' },
+                yAxis: { type: 'value', show: false },
+                grid: { top: 20, bottom: 20, left: 20, right: 20 },
+                series: [{
+                    data: data.summary.rationality.brightness_dist.slice(0, 7),
+                    type: 'bar',
+                    itemStyle: { color: '#ffcc00', borderRadius: [4, 4, 0, 0] },
+                    showBackground: true
+                }]
+            });
+
+            // 4.2 宽高比分类柱状图
+            const chartAspectRatio = echarts.init(document.getElementById('aspectRatioChart'));
+            const arCats = data.summary.rationality.aspect_ratio_dist;
+            chartAspectRatio.setOption({
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'category', data: Object.keys(arCats), axisLabel: { interval: 0, rotate: 15 } },
+                yAxis: { type: 'value', show: false },
+                grid: { top: 30, bottom: 30, left: 20, right: 20 },
+                series: [{
+                    data: Object.values(arCats),
+                    type: 'bar',
+                    itemStyle: { 
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: '#af52de' },
+                            { offset: 1, color: '#5856d6' }
+                        ]), 
+                        borderRadius: [6, 6, 0, 0] 
+                    },
+                    label: { show: true, position: 'top' }
+                }]
+            });
+
+            // 4.3 尺寸统计柱状图
+            const chartSize = echarts.init(document.getElementById('sizeChart'));
+            chartSize.setOption({
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['平均', '最大', '最小'], bottom: 0 },
+                xAxis: { type: 'category', data: ['宽度 (Width)', '高度 (Height)'] },
+                yAxis: { type: 'value', name: '像素 (px)', nameTextStyle: { color: '#86868b', padding: [0, 0, 0, 20] } },
+                grid: { top: 40, bottom: 40, left: 60, right: 20 },
+                series: [
+                    {
+                        name: '平均',
+                        data: [data.summary.rationality.avg_width, data.summary.rationality.avg_height],
+                        type: 'bar',
+                        itemStyle: { 
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#34c759' },
+                                { offset: 1, color: '#32ade6' }
+                            ]),
+                            borderRadius: [8, 8, 0, 0] 
+                        },
+                        label: { show: true, position: 'top', formatter: '{c}', fontSize: 12 }
+                    },
+                    {
+                        name: '最大',
+                        data: [data.summary.rationality.max_width, data.summary.rationality.max_height],
+                        type: 'bar',
+                        itemStyle: { 
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#ff9500' },
+                                { offset: 1, color: '#ffcc00' }
+                            ]),
+                            borderRadius: [8, 8, 0, 0] 
+                        },
+                        label: { show: true, position: 'top', formatter: '{c}', fontSize: 12 }
+                    },
+                    {
+                        name: '最小',
+                        data: [data.summary.rationality.min_width, data.summary.rationality.min_height],
+                        type: 'bar',
+                        itemStyle: { 
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#ff3b30' },
+                                { offset: 1, color: '#ff6b22' }
+                            ]),
+                            borderRadius: [8, 8, 0, 0] 
+                        },
+                        label: { show: true, position: 'top', formatter: '{c}', fontSize: 12 }
+                    }
+                ]
+            });
+
+            // 5. 纯净度 (增强空状态)
+            const chartPurity = echarts.init(document.getElementById('purityChart'));
+            const dupPairs = data.summary.purity.duplicate_pairs;
+            if (dupPairs.length === 0) {
+                chartPurity.setOption({
+                    title: { text: '✨ 100% 纯净', left: 'center', top: 'center', textStyle: { color: '#0071e3' } },
+                    series: [{
+                        type: 'pie', radius: ['60%', '70%'],
+                        data: [{ value: 1, itemStyle: { color: '#0071e3' }, name: '无重复' }]
+                    }]
+                });
+            } else {
+                const nodes = [];
+                const links = [];
+                dupPairs.forEach((pair, idx) => {
+                    nodes.push({ name: pair.original, category: idx }, { name: pair.duplicate, category: idx });
+                    links.push({ source: pair.original, target: pair.duplicate });
+                });
+                const uniqueNodes = Array.from(new Set(nodes.map(n => n.name))).map(name => ({ name, symbolSize: 10 }));
+                
+                chartPurity.setOption({
+                    tooltip: {},
+                    series: [{
+                        type: 'graph',
+                        layout: 'force',
+                        data: uniqueNodes,
+                        links: links,
+                        roam: true,
+                        label: { show: false },
+                        force: { repulsion: 50 }
+                    }]
+                });
+            }
+
+            // 6. 多样性 (3D 散点)
+            const chartDiversity = echarts.init(document.getElementById('diversityChart'));
+            const scatterData = data.summary.diversity.scatter_points.map(p => p.value);
+            chartDiversity.setOption({
+                grid3D: {
+                    viewControl: {
+                        autoRotate: true,
+                        autoRotateSpeed: 10,
+                        rotateSensitivity: 1,
+                        zoomSensitivity: 1,
+                        panSensitivity: 1,
+                        distance: 200
+                    },
+                    light: {
+                        main: { intensity: 1.2, shadow: true },
+                        ambient: { intensity: 0.3 }
+                    }
+                },
+                xAxis3D: { name: '色调' },
+                yAxis3D: { name: '亮度' },
+                zAxis3D: { name: '纹理' },
+                series: [{
+                    type: 'scatter3D',
+                    data: scatterData,
+                    symbolSize: 5,
+                    itemStyle: { color: '#ff9f0a', opacity: 0.8 },
+                    emphasis: {
+                        itemStyle: { color: '#ff3b30', opacity: 1, scale: 1.5 }
+                    }
+                }]
+            });
+            
+            // PDF 导出功能
+            document.getElementById('exportPdfBtn').onclick = async () => {
+                const btn = document.getElementById('exportPdfBtn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<span>⏳</span> 正在生成...';
+                btn.disabled = true;
+
+                try {
+                    // 1. 准备工作：显示内容并添加 PDF 专用样式
+                    const reportGrid = document.getElementById('reportGrid');
+                    const wasHidden = reportGrid.style.display === 'none';
+                    if(wasHidden) {
+                        reportGrid.style.display = 'grid';
+                        // 等待 ECharts 重新渲染/调整大小
+                        await new Promise(r => setTimeout(r, 500));
+                        window.dispatchEvent(new Event('resize'));
+                        await new Promise(r => setTimeout(r, 500));
+                    }
+
+                    // 插入临时标题
+                    const datasetName = document.getElementById('datasetName').textContent;
+                    const titleEl = document.createElement('div');
+                    titleEl.innerHTML = `<h1 style="text-align:center; margin: 20px 0 40px 0; color:#1d1d1f; font-size: 32px; font-weight: 800;">📂 ${datasetName} - 宏观分析报告</h1>`;
+                    titleEl.style.gridColumn = 'span 12';
+                    reportGrid.prepend(titleEl);
+
+                    // 添加高对比度样式（解决图表不清问题）
+                    reportGrid.classList.add('pdf-mode');
+                    const styleEl = document.createElement('style');
+                    styleEl.innerHTML = `
+                        .pdf-mode .chart-card, .pdf-mode .score-card {
+                            background: #ffffff !important;
+                            backdrop-filter: none !important;
+                            box-shadow: none !important;
+                            border: 1px solid #e5e5ea !important;
+                        }
+                        .pdf-mode .card-title span, .pdf-mode .total-score, .pdf-mode .dim-val {
+                            color: #000000 !important;
+                            text-shadow: none !important;
+                        }
+                        .pdf-mode .text-muted, .pdf-mode .dim-label {
+                            color: #333333 !important;
+                        }
+                    `;
+                    document.head.appendChild(styleEl);
+
+                    // 2. 截取图表概览 (Dashboard)
+                    // 使用白色背景，提高清晰度
+                    const canvas1 = await html2canvas(reportGrid, { 
+                        scale: 2, 
+                        useCORS: true, 
+                        backgroundColor: '#ffffff' 
+                    });
+                    
+                    // 清理临时修改
+                    titleEl.remove();
+                    reportGrid.classList.remove('pdf-mode');
+                    styleEl.remove();
+                    if(wasHidden) reportGrid.style.display = 'none';
+
+                    // 3. 创建隐藏的完整报告容器 (表格部分)
+                    const container = document.createElement('div');
+                    container.style.position = 'absolute';
+                    container.style.left = '-9999px';
+                    container.style.width = '1000px'; 
+                    container.style.background = '#fff';
+                    container.style.padding = '40px';
+                    container.innerHTML = `
+                        <h2 style="text-align:center; margin-bottom:40px; color:#1d1d1f; border-bottom: 2px solid #eee; padding-bottom: 20px;">� 详细数据诊断</h2>
+                        <div id="pdf-report-content"></div>
+                    `;
+                    document.body.appendChild(container);
+
+                    const contentDiv = container.querySelector('#pdf-report-content');
+                    
+                    // 辅助函数：生成表格 HTML
+                    const generateSection = (title, emoji, tableId) => {
+                        const originalTable = document.getElementById(tableId);
+                        if(!originalTable) return '';
+                        
+                        const tableClone = originalTable.cloneNode(true);
+                        tableClone.style.width = '100%';
+                        tableClone.style.borderCollapse = 'collapse';
+                        tableClone.style.marginBottom = '30px';
+                        
+                        tableClone.querySelectorAll('th').forEach(th => {
+                            th.style.background = '#f5f5f7';
+                            th.style.padding = '12px';
+                            th.style.borderBottom = '2px solid #e5e5ea';
+                            th.style.textAlign = 'left';
+                            th.style.color = '#333';
+                            th.style.fontWeight = 'bold';
+                        });
+                        tableClone.querySelectorAll('td').forEach(td => {
+                            td.style.padding = '12px';
+                            td.style.borderBottom = '1px solid #f5f5f7';
+                            td.style.color = '#333';
+                        });
+
+                        return `
+                            <div class="pdf-section" style="margin-bottom: 40px; page-break-inside: avoid;">
+                                <h3 style="border-bottom: 2px solid #0071e3; padding-bottom: 10px; margin-bottom: 20px; color: #1d1d1f; font-size: 20px;">
+                                    <span style="font-size: 24px; margin-right: 8px;">${emoji}</span> ${title}
+                                </h3>
+                                ${tableClone.outerHTML}
+                            </div>
+                        `;
+                    };
+
+                    contentDiv.innerHTML = [
+                        generateSection('完整性 (Integrity)', '💾', 'tableIntegrity'),
+                        generateSection('合理性 (Rationality)', '⚖️', 'tableRationality'),
+                        generateSection('纯净度 (Purity)', '🧬', 'tablePurity'),
+                        generateSection('异常检测 (Anomaly)', '🚨', 'tableAnomaly'),
+                        generateSection('多样性 (Diversity)', '🌌', 'tableDiversity')
+                    ].join('');
+
+                    // 4. 生成 PDF
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const pageWidth = pdf.internal.pageSize.getWidth();
+                    const pageHeight = pdf.internal.pageSize.getHeight();
+                    
+                    // A. 添加图表页
+                    const imgData1 = canvas1.toDataURL('image/png');
+                    const imgHeight1 = (canvas1.height * pageWidth) / canvas1.width;
+                    
+                    // 如果图表页太长，进行缩放或分页
+                    if (imgHeight1 <= pageHeight) {
+                        pdf.addImage(imgData1, 'PNG', 0, 0, pageWidth, imgHeight1);
+                    } else {
+                        // 简单缩放适应一页，或者分页（这里选择适应宽度，允许分页）
+                         pdf.addImage(imgData1, 'PNG', 0, 0, pageWidth, imgHeight1);
+                    }
+
+                    // B. 添加表格页
+                    pdf.addPage();
+                    const canvas2 = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+                    const imgData2 = canvas2.toDataURL('image/png');
+                    const imgHeight2 = (canvas2.height * pageWidth) / canvas2.width;
+                    
+                    // 长图分页处理
+                    let heightLeft = imgHeight2;
+                    let position = 0;
+                    let pageCount = 0;
+
+                    // 第一页（表格部分的首页）
+                    pdf.addImage(imgData2, 'PNG', 0, position, pageWidth, imgHeight2);
+                    heightLeft -= pageHeight;
+
+                    while (heightLeft > 0) {
+                        position = heightLeft - imgHeight2; // 这里的计算逻辑对于 addImage 来说，position 应该是负值来移动图片
+                        // 修正分页逻辑
+                        pdf.addPage();
+                        // 每一页都绘制完整的长图，但是通过偏移量显示不同部分
+                        // addImage(imageData, format, x, y, w, h)
+                        // y 应该是负的偏移量
+                        const yOffset = -1 * (pageHeight * (pageCount + 1));
+                        pdf.addImage(imgData2, 'PNG', 0, yOffset, pageWidth, imgHeight2);
+                        heightLeft -= pageHeight;
+                        pageCount++;
+                    }
+                    
+                    pdf.save(`${datasetName}_Analysis_Report.pdf`);
+                    document.body.removeChild(container);
+
+                } catch (e) {
+                    console.error(e);
+                    alert('导出失败: ' + e.message);
+                } finally {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            };
+            
+            window.addEventListener('resize', () => {
+                chartIntegrity.resize();
+                chartAnomaly.resize();
+                chartBrightness.resize();
+                chartAspectRatio.resize();
+                chartSize.resize();
+                chartPurity.resize();
+                chartDiversity.resize();
+            });
+        }
+
+        function renderSummaryTable(data) {
+            // 完整性
+            const integ = data.integrity;
+            const topFormat = Object.keys(integ.format_dist).length > 0 ? Object.keys(integ.format_dist)[0] : 'None';
+            document.querySelector('#tableIntegrity tbody').innerHTML = `
+                <tr><td>完整性评分</td><td>${integ.score}/100</td><td>基于有效文件比例计算</td></tr>
+                <tr><td>有效文件数</td><td>${integ.valid_count}</td><td>成功解析的图片数量</td></tr>
+                <tr><td>损坏/无效文件</td><td>${integ.error_count}</td><td>无法读取或格式不支持的文件</td></tr>
+                <tr><td>主流格式</td><td>${topFormat}</td><td>数据集中占比最高的文件格式</td></tr>
+            `;
+
+            // 合理性 (改进文案)
+            const rat = data.rationality;
+            // 计算简单的统计值
+            const avgBrightness = rat.brightness_dist.reduce((a,b)=>a+b,0) / (rat.brightness_dist.length || 1); 
+            // 找出占比最高的构图类型
+            let maxArType = "Unknown";
+            let maxArCount = -1;
+            for(const [type, count] of Object.entries(rat.aspect_ratio_dist)) {
+                if(count > maxArCount) { maxArCount = count; maxArType = type; }
+            }
+            
+            document.querySelector('#tableRationality tbody').innerHTML = `
+                <tr><td>平均宽度</td><td>${rat.avg_width} px</td><td>数据集中所有图片的平均像素宽度</td></tr>
+                <tr><td>最大宽度</td><td>${rat.max_width} px</td><td>数据集中所有图片的最大像素宽度</td></tr>
+                <tr><td>最小宽度</td><td>${rat.min_width} px</td><td>数据集中所有图片的最小像素宽度</td></tr>
+                <tr><td>平均高度</td><td>${rat.avg_height} px</td><td>数据集中所有图片的平均像素高度</td></tr>
+                <tr><td>最大高度</td><td>${rat.max_height} px</td><td>数据集中所有图片的最大像素高度</td></tr>
+                <tr><td>最小高度</td><td>${rat.min_height} px</td><td>数据集中所有图片的最小像素高度</td></tr>
+                <tr><td>平均亮度分布</td><td>${avgBrightness.toFixed(1)} (bin avg)</td><td>详见直方图，反映数据采集环境的光照一致性</td></tr>
+                <tr><td>主流构图比例</td><td>${maxArType}</td><td>数据集中占比最高的图片形状类型 (横/竖/方)</td></tr>
+            `;
+
+            // 纯净度
+            const pur = data.purity;
+            document.querySelector('#tablePurity tbody').innerHTML = `
+                <tr><td>纯净度评分</td><td>${pur.score}/100</td><td>基于去重后的唯一图片比例</td></tr>
+                <tr><td>发现重复组</td><td>${pur.duplicate_count} 组</td><td>内容完全一致或高度相似的图片组数</td></tr>
+            `;
+
+            // 异常
+            const ano = data.anomaly;
+            document.querySelector('#tableAnomaly tbody').innerHTML = `
+                <tr><td>异常图片数</td><td>${ano.count}</td><td>模糊、过曝、过暗或离群的样本数量</td></tr>
+                <tr><td>异常率</td><td>${((ano.count / (integ.valid_count + integ.error_count || 1)) * 100).toFixed(1)}%</td><td>异常样本占总样本的比例</td></tr>
+            `;
+            
+            // 多样性 (补充数值)
+            const div = data.diversity;
+            document.querySelector('#tableDiversity tbody').innerHTML = `
+                <tr><td>特征空间采样</td><td>${div.scatter_points.length} 点</td><td>参与特征映射的样本总数</td></tr>
+                <tr><td>分布均匀度</td><td>High</td><td>(基于 3D 空间覆盖率估算)</td></tr>
+            `;
+        }
+        
+        function switchReportTab(tabName) {
+            document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            document.querySelectorAll('.report-section').forEach(s => s.classList.remove('active-section'));
+            document.getElementById(`report-${tabName}`).classList.add('active-section');
+        }
+
+        function animateValue(id, start, end, duration) {
+            const obj = document.getElementById(id);
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                if (progress < 1) window.requestAnimationFrame(step);
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        function animateBar(barId, valId, score) {
+            setTimeout(() => {
+                document.getElementById(barId).style.width = score + '%';
+                animateValue(valId, 0, score, 1000);
+            }, 100);
+        }
+    </script>
+</body>
+</html>

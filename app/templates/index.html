@@ -1,0 +1,2432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 视觉特征分析</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #0071e3;
+            --primary-hover: #0077ed;
+            --bg-color: #fbfbfd;
+            --card-bg: rgba(255, 255, 255, 0.8);
+            --text-primary: #1d1d1f;
+            --text-secondary: #86868b;
+            --border-color: #d2d2d7;
+            --border-radius-lg: 24px;
+            --border-radius-md: 16px;
+            --shadow-soft: 0 4px 24px rgba(0, 0, 0, 0.04);
+            --shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.08);
+            --glass-backdrop: blur(20px) saturate(180%);
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-color: #f0f2f5; 
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(255, 107, 107, 0.6) 0px, transparent 50%),
+                radial-gradient(at 98% 1%, rgba(78, 205, 196, 0.6) 0px, transparent 50%),
+                radial-gradient(at 5% 95%, rgba(85, 98, 237, 0.6) 0px, transparent 50%),
+                radial-gradient(at 96% 93%, rgba(255, 209, 102, 0.6) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(255, 255, 255, 0.2) 0px, transparent 50%);
+            background-attachment: fixed;
+            background-size: 100% 100%;
+        }
+        .main-container 
+        {
+            max-width: 1400px; 
+            width: 95%; 
+            margin: 0 auto;
+            padding: 40px 20px 40px; 
+            flex: 1;
+        }
+        .page-header 
+        {
+            text-align: center;
+            margin-bottom: 40px; 
+            animation: fadeInDown 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+            padding: 20px;
+            border-radius: var(--border-radius-lg);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: default;
+        }
+        .page-header:hover 
+        {
+            transform: scale(1.02);
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+        }
+        .emoji-header 
+        {
+            font-size: 64px;
+            margin-bottom: 20px;
+            display: inline-block;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .page-header:hover .emoji-header 
+        {
+            transform: scale(1.2) rotate(15deg);
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+        }
+        .page-title 
+        {
+            font-size: 48px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #1d1d1f 0%, #434344 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            transition: all 0.3s ease;
+        }
+        .page-header:hover .page-title 
+        {
+            background-image: linear-gradient(135deg, #0071e3 0%, #00c6ff 100%);
+            transform: translateY(-2px);
+        }
+        .page-subtitle 
+        {
+            font-size: 20px;
+            color: var(--text-secondary);
+            font-weight: 400;
+            max-width: 500px;
+            margin: 0 auto;
+            line-height: 1.5;
+            transition: color 0.3s ease;
+        }
+        .page-header:hover .page-subtitle 
+        {
+            color: var(--text-primary);
+        }
+        .upload-card 
+        {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: var(--glass-backdrop);
+            -webkit-backdrop-filter: var(--glass-backdrop);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-soft);
+            padding: 40px;
+            margin-bottom: 40px;
+            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s backwards;
+        }
+        .upload-card:hover 
+        {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-4px);
+        }
+        .drag-area 
+        {
+            border: 2px dashed rgba(255, 255, 255, 0.6);
+            border-radius: var(--border-radius-md);
+            padding: 60px 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(5px);
+            position: relative;
+            overflow: hidden;
+        }
+        .drag-area.active 
+        {
+            border-color: var(--primary-color);
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0.99);
+        }
+        .drag-area:hover 
+        {
+            border-color: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.4);
+        }
+        .drag-icon-wrapper 
+        {
+            font-size: 48px;
+            margin-bottom: 16px;
+            transition: transform 0.3s ease;
+        }
+        .drag-area:hover .drag-icon-wrapper {
+            transform: translateY(-8px) scale(1.1);
+        }
+        .drag-text {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        .drag-subtext {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        .btn-action-group {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 32px;
+        }
+        .btn-custom {
+            border: none;
+            border-radius: 980px;
+            padding: 12px 28px;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); 
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-custom span {
+            display: inline-block;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .btn-custom:hover span {
+            transform: scale(1.2) rotate(-10deg); 
+        }
+        .btn-custom:active 
+        {
+            transform: scale(0.95); 
+        }
+        .btn-outline 
+        {
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(5px);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+        .btn-outline:hover 
+        {
+            border-color: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px) scale(1.02); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        }
+        .btn-primary-apple 
+        {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: 0 4px 14px rgba(0, 113, 227, 0.3);
+        }
+        .btn-primary-apple:hover:not(:disabled) 
+        {
+            background: var(--primary-hover);
+            transform: translateY(-2px) scale(1.02); 
+            box-shadow: 0 8px 24px rgba(0, 113, 227, 0.45);
+        }
+        .btn-primary-apple:disabled 
+        {
+            background: #e5e5ea;
+            color: #aeaeb2;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .file-list-wrapper 
+        {
+            margin-top: 30px;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius-md);
+            border: 1px solid rgba(0,0,0,0.05);
+            overflow: hidden;
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+        .file-list-header 
+        {
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.3);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .file-list 
+        {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .file-item 
+        {
+            padding: 12px 20px;
+            border-bottom: 1px solid #f5f5f7;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.2s;
+        }
+        .file-item-left 
+        {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            overflow: hidden; 
+        }
+        .file-item:last-child 
+        {
+            border-bottom: none;
+        }
+        .file-item:hover 
+        {
+            background: #f5f5f7;
+        }
+        .file-icon 
+        {
+            width: 32px;
+            height: 32px;
+            background: #f0f0f2;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .btn-delete-item 
+        {
+            border: none;
+            background: rgba(255, 59, 48, 0.12); 
+            color: #ff3b30;
+            font-size: 14px;
+            cursor: pointer;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            line-height: 1;
+            margin-left: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 1; 
+        }
+        .btn-delete-item:hover 
+        {
+            background: #ff3b30;
+            color: white;
+            transform: scale(1.15) rotate(90deg);
+            box-shadow: 0 4px 10px rgba(255, 59, 48, 0.3);
+        }
+        .btn-clear-all 
+        {
+            border: none;
+            background: rgba(255, 59, 48, 0.1);
+            color: #ff3b30;
+            font-size: 13px; 
+            font-weight: 600;
+            padding: 8px 16px; 
+            border-radius: 99px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-clear-all:hover 
+        {
+            background: #ff3b30;
+            color: white;
+            transform: scale(1.05); 
+            box-shadow: 0 6px 16px rgba(255, 59, 48, 0.25);
+        }
+        .btn-clear-all .clear-icon 
+        {
+            font-size: 14px;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .btn-clear-all:hover .clear-icon 
+        {
+            transform: rotate(15deg) scale(1.2); 
+        }
+        .result-section 
+        {
+            display: none;
+            animation: slideUpFade 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .table-card 
+        {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-soft);
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.02);
+        }
+
+        .table thead th 
+        {
+            background: rgba(255, 255, 255, 0.3);
+            border-bottom: 1px solid #e5e5ea;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 16px 24px;
+            border-top: none;
+        }
+
+        .table tbody td 
+        {
+            padding: 20px 24px;
+            vertical-align: middle;
+            color: var(--text-primary);
+            font-size: 14px;
+            border-bottom: 1px solid #f5f5f7;
+            font-weight: 500;
+        }
+
+        .table tbody tr:last-child td 
+        {
+            border-bottom: none;
+        }
+
+        .color-dot 
+        {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 2px solid rgba(0,0,0,0.1);
+            vertical-align: middle;
+        }
+
+        .btn-view 
+        {
+            color: var(--primary-color);
+            background: rgba(0, 113, 227, 0.08);
+            padding: 6px 16px;
+            border-radius: 99px;
+            font-size: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .btn-view:hover 
+        {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .loading-overlay 
+        {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .loader-container 
+        {
+            width: 300px;
+            text-align: center;
+            position: relative;
+        }
+
+        .track-container 
+        {
+            width: 100%;
+            height: 12px; 
+            background: linear-gradient(90deg, 
+                #ff9a9e 0%, 
+                #fad0c4 20%, 
+                #fbc2eb 40%, 
+                #a18cd1 60%, 
+                #a6c0fe 80%, 
+                #84fab0 100%); 
+            border-radius: 10px;
+            margin-bottom: 24px;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1) inset;
+        }
+
+        .runner-wrapper 
+        {
+            position: absolute;
+            top: -42px; 
+            left: 0;
+            animation: runLoop 4s linear infinite;
+            will-change: transform, left;
+            width: 48px; 
+            height: 48px;
+        }
+
+        .loader-emoji 
+        {
+            font-size: 48px;
+            display: block;
+            line-height: 1;
+        }
+
+        @keyframes runLoop 
+        {
+            0% { 
+                left: 0; 
+                transform: translateX(0) scaleX(-1); 
+            }
+            45% { 
+                left: calc(100% - 48px); 
+                transform: translateX(0) scaleX(-1); 
+            }
+            50% { 
+                left: calc(100% - 48px); 
+                transform: translateX(0) scaleX(1); 
+            }
+            95% { 
+                left: 0; 
+                transform: translateX(0) scaleX(1); 
+            }
+            100% { 
+                left: 0; 
+                transform: translateX(0) scaleX(-1); 
+            }
+        }
+
+        .track-line 
+        {
+            display: none; 
+        }
+
+        @keyframes fadeInDown 
+        {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp 
+        {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideUpFade 
+        {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn 
+        {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        input[type="file"] { display: none; }
+        
+        .modal-content 
+        {
+            border-radius: 24px;
+            border: none;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .modal-header 
+        {
+            border-bottom: 1px solid #f0f0f0;
+            padding: 24px 32px;
+        }
+        
+        .modal-title 
+        {
+            font-weight: 700;
+            font-size: 20px;
+        }
+        
+        pre 
+        {
+            background: #f9f9fb;
+            border-radius: 12px;
+            padding: 24px;
+            color: #333;
+            font-size: 13px;
+            border: 1px solid rgba(0,0,0,0.03);
+            margin: 0;
+        }
+
+        .detail-container 
+        {
+            display: none;
+            margin-top: 40px;
+            animation: slideUpFade 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .detail-header-container 
+        {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 16px 24px;
+            border: 1px solid rgba(255,255,255,0.5);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            transition: transform 0.3s ease;
+        }
+
+        .detail-header-container:hover 
+        {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+        }
+
+        .detail-title-group 
+        {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .detail-icon-box 
+        {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #0071e3 0%, #00c6ff 100%);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .detail-icon-box::after 
+        {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg, 
+                transparent 45%, 
+                rgba(255, 255, 255, 0.3) 50%, 
+                transparent 55%
+            );
+            transform: rotate(45deg) translate(-100%, -100%);
+            transition: transform 0.6s ease;
+        }
+
+        .detail-header-container:hover .detail-icon-box 
+        {
+            transform: rotate(-10deg) scale(1.1);
+            border-radius: 50%; 
+            box-shadow: 0 8px 20px rgba(0, 113, 227, 0.5);
+        }
+
+        .detail-header-container:hover .detail-icon-box::after 
+        {
+            transform: rotate(45deg) translate(100%, 100%); 
+        }
+
+        .detail-icon-emoji 
+        {
+            display: inline-block;
+            transition: transform 0.4s ease;
+        }
+
+        .detail-header-container:hover .detail-icon-emoji 
+        {
+            transform: scale(1.2) rotate(10deg); 
+        }
+
+        .detail-title-text 
+        {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .detail-main-title 
+        {
+            font-size: 22px; 
+            font-weight: 800; 
+            background: linear-gradient(135deg, #0071e3 0%, #00c6ff 100%); 
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+            letter-spacing: -0.01em;
+            text-transform: none; 
+            transition: all 0.3s ease;
+            position: relative;
+            display: inline-block;
+        }
+
+        .detail-header-container:hover .detail-main-title 
+        {
+            text-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+            transform: scale(1.02);
+        }
+
+        .detail-filename 
+        {
+            font-size: 15px; 
+            color: var(--text-primary); 
+            font-weight: 600; 
+            background: rgba(0,0,0,0.04); 
+            padding: 4px 10px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .detail-header-container:hover .detail-filename 
+        {
+            background: rgba(0, 113, 227, 0.1);
+            color: var(--primary-color);
+            transform: translateX(4px); 
+        }
+
+        .detail-filename::before 
+        {
+            content: '📄';
+            font-size: 14px;
+            opacity: 1; 
+        }
+
+        .chart-card 
+        {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-soft);
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.5);
+            transition: transform 0.3s ease;
+        }
+
+        .chart-card:hover 
+        {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+        }
+
+        .chart-title 
+        {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chart-container 
+        {
+            width: 100%;
+            height: 400px;
+        }
+
+        .stat-grid 
+        {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-item 
+        {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            padding: 24px 20px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            border: 1px solid rgba(255,255,255,0.4);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+            cursor: default;
+        }
+
+        .stat-item:hover 
+        {
+            transform: translateY(-8px) scale(1.02);
+            background: rgba(255, 255, 255, 0.65);
+            box-shadow: 0 16px 32px rgba(0, 113, 227, 0.12);
+            border-color: rgba(255,255,255,0.8);
+        }
+
+        .stat-item::after 
+        {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0%;
+            height: 4px;
+            background: var(--primary-color);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+
+        .stat-item:hover::after 
+        {
+            width: 40%;
+        }
+
+        .stat-value 
+        {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #0071e3 0%, #00c6ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 8px 0;
+            transition: transform 0.3s ease;
+            display: inline-block;
+        }
+        
+        .stat-item:hover .stat-value 
+        {
+            transform: scale(1.1);
+        }
+
+        .stat-label 
+        {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            transition: color 0.3s;
+        }
+
+        .stat-item:hover .stat-label 
+        {
+            color: var(--text-primary);
+        }
+
+        .emoji-floater 
+        {
+            position: fixed;
+            bottom: -50px;
+            font-size: 24px;
+            animation: floatUp linear infinite;
+            z-index: -1;
+            opacity: 0.6;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        @keyframes floatUp 
+        {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.6; }
+            100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
+        }
+
+        .trivia-footer 
+        {
+            text-align: center;
+            padding: 20px;
+            margin: 40px auto 20px;
+            max-width: 1400px;
+            width: 95%;
+            color: var(--text-secondary);
+            font-size: 14px;
+            background: rgba(255,255,255,0.4);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius-md);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .trivia-footer:hover 
+        {
+            background: rgba(255,255,255,0.6);
+            transform: translateY(-2px);
+        }
+        .feature-grid 
+        {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .feature-card 
+        {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius-md);
+            padding: 24px;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 1px solid rgba(255,255,255,0.4);
+            cursor: pointer;
+        }
+
+        .feature-card:hover 
+        {
+            transform: translateY(-8px) scale(1.03);
+            background: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+        }
+
+        .feature-icon 
+        {
+            font-size: 40px;
+            margin-bottom: 16px;
+            display: inline-block;
+            transition: transform 0.3s;
+        }
+
+        .feature-card:hover .feature-icon 
+        {
+            transform: rotateY(180deg);
+        }
+
+        .feature-title 
+        {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .feature-desc 
+        {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .report-tabs 
+        {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding-bottom: 16px;
+        }
+
+        .report-tab 
+        {
+            padding: 10px 20px;
+            border-radius: 99px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            background: rgba(255,255,255,0.4);
+            color: var(--text-secondary);
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .report-tab:hover 
+        {
+            background: rgba(255, 255, 255, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            color: var(--text-primary);
+        }
+
+        .report-tab.active 
+        {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: 0 6px 16px rgba(0, 113, 227, 0.3);
+            padding-left: 24px; 
+            padding-right: 24px;
+        }
+
+        .report-tab-emoji 
+        {
+            display: inline-block;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            font-size: 16px;
+        }
+
+        .report-tab:hover .report-tab-emoji 
+        {
+            transform: scale(1.3) rotate(-15deg);
+        }
+
+        .report-tab.active .report-tab-emoji 
+        {
+            transform: scale(1.2); 
+        }
+        
+        
+        .report-card-container {
+            border: 1px solid rgba(255,255,255,0.4);
+        }
+
+        .report-main-title {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            padding: 8px 16px;
+            border-radius: 12px;
+            margin-left: -12px;
+            cursor: default; 
+        }
+
+        .report-main-title:hover {
+            background: rgba(0, 113, 227, 0.05);
+            transform: translateX(8px);
+        }
+
+        .report-title-emoji {
+            display: inline-block;
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .report-main-title:hover .report-title-emoji {
+            transform: scale(1.4) rotate(360deg);
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .report-table th, .report-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .report-table th {
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.3);
+        }
+
+        .report-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .report-section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .report-section.active {
+            display: block;
+        }
+
+        .image-showcase-card {
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-radius: var(--border-radius-lg);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: var(--shadow-soft);
+            padding: 24px;
+            margin-bottom: 30px;
+            position: relative;
+            transition: all 0.4s ease;
+        }
+
+        .image-showcase-card:hover {
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .image-container {
+            width: 100%;
+            height: 480px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.02);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .image-container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: 
+                linear-gradient(45deg, rgba(0,0,0,0.08) 25%, transparent 25%), 
+                linear-gradient(-45deg, rgba(0,0,0,0.08) 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, rgba(0,0,0,0.08) 75%), 
+                linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.08) 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            
+            -webkit-mask-image: radial-gradient(
+                circle 250px at var(--cursor-x, 50%) var(--cursor-y, 50%), 
+                black 0%, 
+                transparent 100%
+            );
+            mask-image: radial-gradient(
+                circle 250px at var(--cursor-x, 50%) var(--cursor-y, 50%), 
+                black 0%, 
+                transparent 100%
+            );
+            
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 0;
+            pointer-events: none; 
+        }
+
+        .image-container:hover::before {
+            opacity: 1;
+        }
+
+        .showcase-img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            filter: drop-shadow(0 15px 30px rgba(0,0,0,0.15));
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 1; 
+        }
+        
+        .showcase-img:hover {
+            transform: scale(1.03);
+        }
+
+        .confirm-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .confirm-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .confirm-box {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            padding: 32px;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            border: 1px solid rgba(255,255,255,0.6);
+            width: 360px;
+            text-align: center;
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .confirm-overlay.active .confirm-box {
+            transform: scale(1) translateY(0);
+        }
+
+        .confirm-emoji {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: inline-block;
+            animation: shake 0.5s ease-in-out 0.3s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: rotate(0); }
+            25% { transform: rotate(-10deg); }
+            75% { transform: rotate(10deg); }
+        }
+
+        .confirm-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #1d1d1f;
+        }
+
+        .confirm-text {
+            font-size: 15px;
+            color: #86868b;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .confirm-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .btn-confirm {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 15px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-confirm-cancel {
+            background: rgba(0,0,0,0.05);
+            color: #1d1d1f;
+        }
+
+        .btn-confirm-cancel:hover {
+            background: rgba(0,0,0,0.1);
+        }
+
+        .btn-confirm-danger {
+            background: #ff3b30;
+            color: white;
+            box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3);
+        }
+
+        .btn-confirm-danger:hover {
+            background: #ff453a;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(255, 59, 48, 0.4);
+        }
+        .image-tag { display: none !important; }
+        
+        .btn-back {
+            position: fixed;
+            top: 24px;
+            left: 24px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 99px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.8);
+            transform: translateX(4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- 返回按钮 -->
+        <a href="/" class="btn-back">
+            <span>🔙</span> 返回首页
+        </a>
+
+        <header class="page-header">
+            <div class="emoji-header">✨</div>
+            <h1 class="page-title">微观 · 单图透视</h1>
+            <p class="page-subtitle" id="typingSubtitle"></p>
+        </header>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🌈</div>
+                <div class="feature-title">色彩基因解码</div>
+                <div class="feature-desc">精准提取 HSV/RGB 空间分布，识别图片情感主色调</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔬</div>
+                <div class="feature-title">微观纹理识别</div>
+                <div class="feature-desc">基于 GLCM 算法，量化分析图像的对比度与能量熵</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <div class="feature-title">三维数据可视化</div>
+                <div class="feature-desc">生成 3D 散点与雷达图，多维度呈现像素分布特征</div>
+            </div>
+        </div>
+
+        <div class="upload-card">
+            <div class="drag-area" id="dragArea">
+                <div class="drag-icon-wrapper" id="dragIcon">☁️</div>
+                <div class="drag-text" id="dragText">点击或拖拽文件到这里</div>
+                <div class="drag-subtext">支持 JPG, PNG, WEBP, BMP, TIFF</div>
+                
+                <input type="file" id="fileInput" multiple accept="image/*">
+                <input type="file" id="folderInput" webkitdirectory directory>
+            </div>
+
+            <div class="btn-action-group">
+                <button class="btn-custom btn-outline" onclick="document.getElementById('fileInput').click()">
+                    <span>📄</span> 选择文件
+                </button>
+                <button class="btn-custom btn-outline" onclick="document.getElementById('folderInput').click()">
+                    <span>📂</span> 选择文件夹
+                </button>
+            </div>
+
+            <div class="file-list-wrapper" id="fileListWrapper">
+                <div class="file-list-header">
+                    <span>已选择 <span id="fileCount">0</span> 个项目</span>
+                    <button class="btn-clear-all" id="clearBtn">
+                        清空列表 <span class="clear-icon">🗑️</span>
+                    </button>
+                </div>
+                <ul class="file-list" id="fileList">
+                </ul>
+            </div>
+
+            <div class="text-center mt-5">
+                <button class="btn-custom btn-primary-apple" id="analyzeBtn" disabled style="margin: 0 auto; min-width: 160px; justify-content: center;">
+                    开始智能分析 <span>⚡️</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="result-section" id="resultSection">
+            <h3 class="mb-4" style="font-weight: 700; font-size: 24px; padding-left: 8px;">📋 分析结果列表</h3>
+            <div class="table-card">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>文件名</th>
+                                <th>尺寸</th>
+                                <th>状态</th>
+                                <th class="text-end">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="detail-container" id="detailContainer" style="display: none;">
+            <div class="detail-header-container">
+                <div class="detail-title-group">
+                    <div class="detail-icon-box"><span class="detail-icon-emoji">🧬</span></div>
+                    <div class="detail-title-text">
+                        <div class="detail-main-title">特征深度分析</div>
+                        <div id="detailFileName" class="detail-filename"></div>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-3" id="detailControls">
+                    <button class="btn-custom btn-primary-apple" onclick="downloadReport()" style="padding: 10px 24px; font-size: 14px;">
+                        <span>📥</span> 导出 PDF 报告
+                    </button>
+                    <button class="btn-custom btn-outline" onclick="closeDetail()" style="padding: 10px 24px; font-size: 14px; background: rgba(255,255,255,0.6);">
+                        <span>🔼</span> 收起详情
+                    </button>
+                </div>
+            </div>
+
+            <div class="image-showcase-card">
+                <div class="image-container">
+                    <img id="detailImage" src="" alt="原始图片" class="showcase-img">
+                    <div class="image-tag">
+                        <span>�</span> 原始图像预览
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-grid" id="statGrid"></div>
+
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="chart-card">
+                        <div class="chart-title">🌈 色调分布 (Hue)</div>
+                        <div id="hueChart" class="chart-container"></div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="chart-card">
+                        <div class="chart-title">🎨 饱和度分布 (Saturation)</div>
+                        <div id="saturationChart" class="chart-container"></div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="chart-card">
+                        <div class="chart-title">💡 亮度分布 (Value)</div>
+                        <div id="brightnessChart" class="chart-container"></div>
+                    </div>
+                </div>
+                
+                <div class="col-12">
+                    <div class="chart-card">
+                        <div class="chart-title">🎲 RGB 三维色彩空间分布</div>
+                        <div id="scatter3dChart" class="chart-container" style="height: 500px;"></div>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div class="chart-card">
+                        <div class="chart-title">📦 RGB 通道统计 (Boxplot)</div>
+                        <div id="rgbBoxChart" class="chart-container"></div>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="chart-card">
+                        <div class="chart-title">🕸️ GLCM 纹理特征</div>
+                        <div id="textureRadar" class="chart-container"></div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="chart-card">
+                        <div class="chart-title">📐 边缘方向分布</div>
+                        <div id="edgeChart" class="chart-container"></div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="chart-card">
+                        <div class="chart-title">🎛️ 图像复杂度 (Complexity)</div>
+                        <div id="gaugeChart" class="chart-container"></div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="chart-card">
+                        <div class="chart-title">📷 EXIF 元数据信息</div>
+                        <div id="exifContainer" style="padding: 20px; font-size: 14px; color: var(--text-secondary); display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px;">
+                            <div class="text-center text-muted">暂无 EXIF 信息</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-card p-4 mt-4 report-card-container">
+                <h4 class="mb-4 fw-bold report-main-title">
+                    <span class="report-title-emoji">📑</span> 深度分析报告
+                </h4>
+                
+                <div class="report-tabs">
+                    <div class="report-tab active" onclick="switchReportTab('color')">
+                        <span class="report-tab-emoji">🎨</span> 颜色统计
+                    </div>
+                    <div class="report-tab" onclick="switchReportTab('texture')">
+                        <span class="report-tab-emoji">🧬</span> 纹理与频域
+                    </div>
+                    <div class="report-tab" onclick="switchReportTab('shape')">
+                        <span class="report-tab-emoji">📐</span> 形状与空间
+                    </div>
+                    <div class="report-tab" onclick="switchReportTab('meta')">
+                        <span class="report-tab-emoji">ℹ️</span> 元数据与质量
+                    </div>
+                </div>
+
+                <div id="report-color" class="report-section active">
+                    <h5 class="pdf-section-title mb-3 fw-bold text-dark border-bottom pb-2 mt-4" style="display: none;">🎨 颜色统计分析</h5>
+                    <h6 class="mb-3 fw-bold text-primary">全局颜色指标</h6>
+                    <table class="report-table mb-4" id="tableColorGlobal">
+                        <tbody></tbody>
+                    </table>
+                    
+                    <h6 class="mb-3 fw-bold text-primary">通道详细统计</h6>
+                    <table class="report-table" id="tableColor">
+                        <thead>
+                            <tr>
+                                <th>通道</th>
+                                <th>均值 (Mean)</th>
+                                <th>标准差 (Std)</th>
+                                <th>偏度 (Skew)</th>
+                                <th>峰度 (Kurt)</th>
+                                <th>最小值</th>
+                                <th>最大值</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div id="report-texture" class="report-section">
+                    <h5 class="pdf-section-title mb-3 fw-bold text-dark border-bottom pb-2 mt-4" style="display: none;">🧬 纹理与频域特征</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="mb-3 fw-bold text-primary">GLCM 灰度共生矩阵</h6>
+                            <table class="report-table" id="tableGLCM">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 30%">指标</th>
+                                        <th style="width: 20%">数值</th>
+                                        <th style="width: 50%">含义说明</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="mb-3 fw-bold text-primary">频域与边缘特征</h6>
+                            <table class="report-table" id="tableFFT">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 30%">指标</th>
+                                        <th style="width: 20%">数值</th>
+                                        <th style="width: 50%">含义说明</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="report-shape" class="report-section">
+                    <h5 class="pdf-section-title mb-3 fw-bold text-dark border-bottom pb-2 mt-4" style="display: none;">📐 形状与空间几何</h5>
+                    <h6 class="mb-3 fw-bold text-primary">几何与空间特征</h6>
+                    <table class="report-table" id="tableShape">
+                        <thead>
+                            <tr>
+                                <th style="width: 30%">特征指标</th>
+                                <th style="width: 20%">数值</th>
+                                <th style="width: 50%">说明</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div id="report-meta" class="report-section">
+                    <h5 class="pdf-section-title mb-3 fw-bold text-dark border-bottom pb-2 mt-4" style="display: none;">ℹ️ 元数据与质量分析</h5>
+                    <h6 class="mb-3 fw-bold text-primary">质量检测指标</h6>
+                    <table class="report-table" id="tableMeta">
+                        <thead>
+                            <tr>
+                                <th style="width: 30%">指标</th>
+                                <th style="width: 20%">数值</th>
+                                <th style="width: 50%">说明</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="trivia-footer" onclick="refreshTrivia()">
+        💡 <strong>你知道吗？</strong> <span id="triviaText">加载中...</span>
+    </div>
+
+    <div class="modal fade" id="detailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">🧬 特征数据详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <pre id="detailContent"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loader-container">
+            <div class="track-container">
+                <div class="track-line"></div>
+                <div class="runner-wrapper">
+                    <div class="loader-emoji">🏃‍♂️</div>
+                </div>
+            </div>
+            <h5 style="font-weight: 600; color: var(--text-primary); margin-top: 10px;">正在深入分析...</h5>
+            <p style="color: var(--text-secondary); font-size: 14px;">AI 正在计算颜色、纹理与形状特征</p>
+        </div>
+    </div>
+
+    <div class="confirm-overlay" id="confirmOverlay">
+        <div class="confirm-box">
+            <div class="confirm-emoji">🗑️</div>
+            <div class="confirm-title">确定要清空吗？</div>
+            <div class="confirm-text">此操作将移除列表中所有已选择的文件。<br>该操作无法撤销。</div>
+            <div class="confirm-actions">
+                <button class="btn-confirm btn-confirm-cancel" id="cancelClear">取消</button>
+                <button class="btn-confirm btn-confirm-danger" id="confirmClear">确认清空</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const dragArea = document.getElementById('dragArea');
+        const dragIcon = document.getElementById('dragIcon');
+        const dragText = document.getElementById('dragText');
+        const fileInput = document.getElementById('fileInput');
+        const folderInput = document.getElementById('folderInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const fileListWrapper = document.getElementById('fileListWrapper');
+        const fileCountSpan = document.getElementById('fileCount');
+        const fileListUl = document.getElementById('fileList');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const confirmOverlay = document.getElementById('confirmOverlay');
+        const cancelClearBtn = document.getElementById('cancelClear');
+        const confirmClearBtn = document.getElementById('confirmClear');
+        const resultSection = document.getElementById('resultSection');
+        const resultBody = document.getElementById('resultBody');
+        const detailContent = document.getElementById('detailContent');
+
+        let selectedFiles = [];
+        let analysisResults = [];
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dragArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dragArea.addEventListener(eventName, () => {
+                dragArea.classList.add('active');
+                dragIcon.textContent = "📂";
+                dragIcon.style.transform = "scale(1.2)";
+                dragText.textContent = "释放以添加文件";
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dragArea.addEventListener(eventName, () => {
+                dragArea.classList.remove('active');
+                dragIcon.textContent = "☁️";
+                dragIcon.style.transform = "scale(1)";
+                dragText.textContent = "点击或拖拽文件到这里";
+            }, false);
+        });
+
+        dragArea.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        });
+
+        dragArea.addEventListener('click', (e) => {
+            if(e.target === dragArea || e.target === dragIcon || e.target === dragText) {
+                fileInput.click();
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        folderInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function handleFiles(files) {
+            const newFiles = Array.from(files).filter(f => f.type.startsWith('image/') || f.name.match(/\.(jpg|jpeg|png|bmp|webp|tiff)$/i));
+            if (newFiles.length === 0) return;
+            
+            selectedFiles = [...selectedFiles, ...newFiles];
+            updateUI();
+            
+            dragIcon.textContent = "🎉";
+            setTimeout(() => dragIcon.textContent = "☁️", 1000);
+        }
+
+        function updateUI() {
+            fileCountSpan.textContent = selectedFiles.length;
+            analyzeBtn.disabled = selectedFiles.length === 0;
+            
+            if (selectedFiles.length > 0) {
+                fileListWrapper.style.display = 'block';
+                fileListUl.innerHTML = '';
+                
+                selectedFiles.forEach((f, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'file-item';
+                    li.style.animation = `fadeIn 0.2s ease backwards ${index * 0.03}s`;
+                    li.innerHTML = `
+                        <div class="file-item-left">
+                            <div class="file-icon">🖼️</div>
+                            <span class="text-truncate" title="${f.name}">${f.name}</span>
+                        </div>
+                        <button class="btn-delete-item" onclick="removeFile(${index})" title="移除此文件">
+                            ✖
+                        </button>
+                    `;
+                    fileListUl.appendChild(li);
+                });
+            } else {
+                fileListWrapper.style.display = 'none';
+            }
+        }
+
+        window.removeFile = function(index) {
+            if(event) event.stopPropagation();
+            
+            selectedFiles.splice(index, 1);
+            
+            if (selectedFiles.length === 0) {
+                fileInput.value = '';
+                folderInput.value = '';
+                resultSection.style.display = 'none';
+            }
+            
+            updateUI();
+        }
+
+        clearBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            if (selectedFiles.length > 0) {
+                confirmOverlay.classList.add('active');
+            } else {
+                performClear();
+            }
+        });
+
+        function performClear() {
+            selectedFiles = [];
+            fileInput.value = '';
+            folderInput.value = '';
+            updateUI();
+            resultSection.style.display = 'none';
+            confirmOverlay.classList.remove('active');
+        }
+
+        confirmClearBtn.addEventListener('click', performClear);
+        
+        cancelClearBtn.addEventListener('click', () => {
+            confirmOverlay.classList.remove('active');
+        });
+
+        confirmOverlay.addEventListener('click', (e) => {
+            if (e.target === confirmOverlay) {
+                confirmOverlay.classList.remove('active');
+            }
+        });
+
+        analyzeBtn.addEventListener('click', async () => {
+            if (selectedFiles.length === 0) return;
+            
+            loadingOverlay.style.display = 'flex';
+            resultSection.style.display = 'none';
+            resultBody.innerHTML = '';
+            analysisResults = [];
+
+            const formData = new FormData();
+            selectedFiles.forEach(file => {
+                formData.append('files', file);
+            });
+
+            try {
+                await new Promise(r => setTimeout(r, 800));
+                
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) throw new Error('网络请求失败');
+                
+                const results = await response.json();
+                analysisResults = results;
+                renderResults(results);
+                
+            } catch (error) {
+                alert('分析失败: ' + error.message);
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        });
+
+        function renderResults(results) {
+            resultSection.style.display = 'block';
+            
+            results.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.style.animation = `fadeInUp 0.3s ease backwards ${index * 0.05}s`;
+                
+                if (item.status === 'error') {
+                    tr.innerHTML = `
+                        <td><span class="text-danger">⚠️</span> ${item.filename}</td>
+                        <td colspan="2" class="text-danger">${item.message}</td>
+                        <td class="text-end">-</td>
+                    `;
+                } else {
+                    const d = item.data;
+                    const shape = d.shape_space;
+                    
+                    tr.innerHTML = `
+                        <td style="font-weight: 500;">${item.filename}</td>
+                        <td style="color: var(--text-secondary);">${shape.height} × ${shape.width}</td>
+                        <td><span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">分析完成</span></td>
+                        <td class="text-end">
+                            <span class="btn-view" onclick="showDetail(${index})">查看详情</span>
+                        </td>
+                    `;
+                }
+                resultBody.appendChild(tr);
+            });
+            
+            setTimeout(() => {
+                resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+
+        const detailContainer = document.getElementById('detailContainer');
+        const statGrid = document.getElementById('statGrid');
+        
+        let charts = {};
+
+        function initCharts() {
+            if (charts.hue) return; 
+            charts.hue = echarts.init(document.getElementById('hueChart'));
+            charts.saturation = echarts.init(document.getElementById('saturationChart'));
+            charts.brightness = echarts.init(document.getElementById('brightnessChart'));
+            charts.scatter = echarts.init(document.getElementById('scatter3dChart'));
+            charts.boxplot = echarts.init(document.getElementById('rgbBoxChart'));
+            charts.radar = echarts.init(document.getElementById('textureRadar'));
+            charts.edge = echarts.init(document.getElementById('edgeChart'));
+            charts.gauge = echarts.init(document.getElementById('gaugeChart'));
+            
+            window.addEventListener('resize', () => {
+                Object.values(charts).forEach(c => c.resize());
+            });
+        }
+
+        window.switchReportTab = function(tabName) {
+            document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.querySelectorAll('.report-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(`report-${tabName}`).classList.add('active');
+        }
+
+        window.showDetail = function(index) {
+            const item = analysisResults[index];
+            if (!item) return;
+            const d = item.data;
+            document.getElementById('detailFileName').textContent = item.filename;
+            const file = selectedFiles[index];
+            if (file) {
+                const imgUrl = URL.createObjectURL(file);
+                document.getElementById('detailImage').src = imgUrl;
+            }
+            statGrid.innerHTML = `
+                <div class="stat-item"><div class="stat-value">${d.shape_space.width}x${d.shape_space.height}</div><div class="stat-label">尺寸</div></div>
+                <div class="stat-item"><div class="stat-value">${(d.color.dominant_hue_ratio * 100).toFixed(1)}%</div><div class="stat-label">主色调占比</div></div>
+                <div class="stat-item"><div class="stat-value">${d.color.avg_brightness.toFixed(1)}</div><div class="stat-label">平均亮度</div></div>
+                <div class="stat-item"><div class="stat-value">${d.texture_edge.glcm_contrast.toFixed(2)}</div><div class="stat-label">纹理对比度</div></div>
+                <div class="stat-item"><div class="stat-value">${(d.texture_edge.edge_pixel_ratio * 100).toFixed(1)}%</div><div class="stat-label">边缘密度</div></div>
+                <div class="stat-item"><div class="stat-value">${d.meta_quality?.blur_score?.toFixed(0) || '-'}</div><div class="stat-label">清晰度评分</div></div>
+            `;
+
+            // 渲染 EXIF 信息
+            const exifContainer = document.getElementById('exifContainer');
+            const exifData = d.meta_quality?.exif_info || {};
+            if (Object.keys(exifData).length > 0) {
+                exifContainer.innerHTML = Object.entries(exifData).map(([k, v]) => `
+                    <div style="background: rgba(255,255,255,0.5); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05);">
+                        <div style="font-weight: 600; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px;">${k}</div>
+                        <div style="color: var(--text-primary); font-weight: 500;">${v}</div>
+                    </div>
+                `).join('');
+            } else {
+                exifContainer.innerHTML = '<div class="text-center text-muted w-100 py-3">暂无 EXIF 信息</div>';
+            }
+
+            const globalColorBody = document.querySelector('#tableColorGlobal tbody');
+            globalColorBody.innerHTML = `
+                <tr>
+                    <td style="width: 25%"><strong>主色调 (Dominant Hue)</strong></td>
+                    <td style="width: 25%">${d.color.dominant_hue_value.toFixed(1)}° (${(d.color.dominant_hue_ratio * 100).toFixed(1)}%)</td>
+                    <td style="width: 25%"><strong>平均亮度 (Avg Brightness)</strong></td>
+                    <td style="width: 25%">${d.color.avg_brightness.toFixed(1)} / 255</td>
+                </tr>
+                <tr>
+                    <td><strong>亮度动态范围 (Dynamic Range)</strong></td>
+                    <td>${d.color.brightness_dynamic_range.toFixed(0)}</td>
+                    <td><strong>平均饱和度 (Avg Saturation)</strong></td>
+                    <td>${d.color.avg_saturation.toFixed(1)} / 255</td>
+                </tr>
+            `;
+
+            const colorBody = document.querySelector('#tableColor tbody');
+            let colorHtml = '';
+            ['R','G','B'].forEach(c => {
+                colorHtml += `<tr>
+                    <td><span style="color: ${c==='R'?'red':c==='G'?'green':'blue'}">RGB-${c}</span></td>
+                    <td>${d.color[`RGB_${c}_mean`]?.toFixed(2) || '-'}</td>
+                    <td>${d.color[`RGB_${c}_std`]?.toFixed(2) || '-'}</td>
+                    <td>${d.color[`RGB_${c}_skew`]?.toFixed(2) || '-'}</td>
+                    <td>${d.color[`RGB_${c}_kurt`]?.toFixed(2) || '-'}</td>
+                    <td>${d.color[`RGB_${c}_min`] || '-'}</td>
+                    <td>${d.color[`RGB_${c}_max`] || '-'}</td>
+                </tr>`;
+            });
+            ['H','S','V'].forEach(c => {
+                colorHtml += `<tr>
+                    <td>HSV-${c}</td>
+                    <td>${d.color[`HSV_${c}_mean`]?.toFixed(2) || '-'}</td>
+                    <td>${d.color[`HSV_${c}_std`]?.toFixed(2) || '-'}</td>
+                    <td>${d.color[`HSV_${c}_skew`]?.toFixed(2) || '-'}</td>
+                    <td>${d.color[`HSV_${c}_kurt`]?.toFixed(2) || '-'}</td>
+                    <td>${d.color[`HSV_${c}_min`] || '-'}</td>
+                    <td>${d.color[`HSV_${c}_max`] || '-'}</td>
+                </tr>`;
+            });
+            colorBody.innerHTML = colorHtml;
+
+            document.querySelector('#tableGLCM tbody').innerHTML = `
+                <tr><td>对比度 (Contrast)</td><td>${d.texture_edge.glcm_contrast.toFixed(4)}</td><td>反映图片纹理的粗糙程度，值越大越清晰/粗糙</td></tr>
+                <tr><td>相关性 (Correlation)</td><td>${d.texture_edge.glcm_correlation.toFixed(4)}</td><td>衡量灰度分布的空间线性依赖关系</td></tr>
+                <tr><td>能量 (Energy)</td><td>${d.texture_edge.glcm_energy.toFixed(4)}</td><td>反映纹理变化的均匀性，值越大越规则</td></tr>
+                <tr><td>同质性 (Homogeneity)</td><td>${d.texture_edge.glcm_homogeneity.toFixed(4)}</td><td>反映图片纹理的局部均匀程度</td></tr>
+            `;
+            
+            document.querySelector('#tableFFT tbody').innerHTML = `
+                <tr><td>边缘像素占比</td><td>${(d.texture_edge.edge_pixel_ratio*100).toFixed(2)}%</td><td>基于 Canny 算子检测出的边缘点密度</td></tr>
+                <tr><td>低频能量占比</td><td>${(d.texture_edge.fft_low_freq_ratio*100).toFixed(2)}%</td><td>反映图片主体轮廓和背景的平滑区域占比</td></tr>
+                <tr><td>高频能量占比</td><td>${(d.texture_edge.fft_high_freq_ratio*100).toFixed(2)}%</td><td>反映图片细节、噪声和边缘的丰富程度</td></tr>
+                <tr><td>边缘方向 (0°-90°)</td><td>${(d.texture_edge.edge_dir_0_90_ratio*100).toFixed(1)}%</td><td>基于 Sobel 算子统计的边缘梯度方向</td></tr>
+                <tr><td>边缘方向 (90°-180°)</td><td>${(d.texture_edge.edge_dir_90_180_ratio*100).toFixed(1)}%</td><td>基于 Sobel 算子统计的边缘梯度方向</td></tr>
+                <tr><td>细节丰富度 (Detail)</td><td>${(d.texture_edge.edge_pixel_ratio * 1000).toFixed(0)}</td><td>综合边缘密度与高频能量的量化指标</td></tr>
+            `;
+
+            document.querySelector('#tableShape tbody').innerHTML = `
+                <tr><td>图片物理尺寸</td><td>${d.shape_space.width} x ${d.shape_space.height}</td><td>图片的宽 x 高 (px)</td></tr>
+                <tr><td>图片宽高比</td><td>${d.shape_space.aspect_ratio.toFixed(2)}</td><td>W / H 比例</td></tr>
+                <tr><td>最大轮廓面积</td><td>${d.shape_space.max_contour_area} px²</td><td>图中最大连通区域的面积</td></tr>
+                <tr><td>最大轮廓周长</td><td>${d.shape_space.max_contour_perimeter.toFixed(2)} px</td><td>图中最大连通区域的周长</td></tr>
+                <tr><td>轮廓长宽比</td><td>${d.shape_space.max_contour_aspect_ratio.toFixed(2)}</td><td>目标边界矩形的宽高比</td></tr>
+                <tr><td>重心位置 (X, Y)</td><td>${(d.shape_space.center_x_ratio*100).toFixed(1)}%, ${(d.shape_space.center_y_ratio*100).toFixed(1)}%</td><td>目标质心在图像中的相对坐标</td></tr>
+                <tr><td>空间自相关性 (局部方差均值)</td><td>${d.shape_space.local_variance_mean?.toFixed(2) || '-'}</td><td>反映像素空间分布的平滑/粗糙程度</td></tr>
+                <tr><td>空间自相关性 (局部方差标准差)</td><td>${d.shape_space.local_variance_std?.toFixed(2) || '-'}</td><td>反映图像纹理变化的均匀性</td></tr>
+            `;
+
+            document.querySelector('#tableMeta tbody').innerHTML = `
+                <tr><td>清晰度评分 (Blur Score)</td><td>${d.meta_quality?.blur_score?.toFixed(1) || '-'}</td><td>基于拉普拉斯方差，值越低越模糊 (<100 视为模糊)</td></tr>
+                <tr><td>感知哈希 (pHash)</td><td style="font-family: monospace;">${d.meta_quality?.image_phash || '-'}</td><td>图像的内容指纹，用于检测重复图片</td></tr>
+                <tr><td>EXIF 信息量</td><td>${Object.keys(d.meta_quality?.exif_info || {}).length} 项</td><td>包含的拍摄设备原始参数数量</td></tr>
+            `;
+
+            detailContainer.style.display = 'block';
+            initCharts();
+            
+
+            charts.hue.setOption({
+                tooltip: { trigger: 'axis' },
+                grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                xAxis: { type: 'category', data: Array.from({length: d.color.color_hist_h.length}, (_, i) => i * 4) },
+                yAxis: { type: 'value', show: false },
+                series: [{
+                    data: d.color.color_hist_h,
+                    type: 'bar',
+                    itemStyle: { color: (p) => `hsl(${p.dataIndex * 4}, 70%, 50%)` },
+                    barWidth: '100%'
+                }]
+            });
+
+            if (d.color.color_hist_s) {
+                charts.saturation.setOption({
+                    tooltip: { trigger: 'axis' },
+                    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                    xAxis: { type: 'category', data: Array.from({length: d.color.color_hist_s.length}, (_, i) => i * 4) },
+                    yAxis: { type: 'value', show: false },
+                    series: [{
+                        data: d.color.color_hist_s,
+                        type: 'line',
+                        smooth: true,
+                        areaStyle: { color: 'rgba(255, 107, 107, 0.3)' },
+                        itemStyle: { color: '#ff6b6b' }
+                    }]
+                });
+            }
+
+            charts.brightness.setOption({
+                tooltip: { trigger: 'axis' },
+                grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                xAxis: { type: 'category', data: Array.from({length: d.color.color_hist_v.length}, (_, i) => i * 4) },
+                yAxis: { type: 'value', show: false },
+                series: [{
+                    data: d.color.color_hist_v,
+                    type: 'line',
+                    smooth: true,
+                    areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: 'rgba(0,113,227,0.5)'}, {offset: 1, color: 'rgba(0,113,227,0)'}]) },
+                    itemStyle: { color: '#0071e3' }
+                }]
+            });
+
+            if (d.color.scatter_rgb) {
+                charts.scatter.setOption({
+                    grid3D: { viewControl: { autoRotate: true, alpha: 20, beta: 30 } },
+                    xAxis3D: { name: 'R', min: 0, max: 255, interval: 51 },
+                    yAxis3D: { name: 'G', min: 0, max: 255, interval: 51 },
+                    zAxis3D: { name: 'B', min: 0, max: 255, interval: 51 },
+                    series: [{
+                        type: 'scatter3D',
+                        symbolSize: 4,
+                        data: d.color.scatter_rgb,
+                        itemStyle: { color: (p) => `rgb(${p.data[0]}, ${p.data[1]}, ${p.data[2]})` }
+                    }]
+                });
+            }
+
+            if (d.color.rgb_boxplot) {
+                const boxData = [
+                    d.color.rgb_boxplot.R,
+                    d.color.rgb_boxplot.G,
+                    d.color.rgb_boxplot.B
+                ];
+                charts.boxplot.setOption({
+                    tooltip: { trigger: 'item', axisPointer: { type: 'shadow' } },
+                    grid: { left: '10%', right: '10%', bottom: '15%' },
+                    xAxis: {
+                        type: 'category',
+                        data: ['Red', 'Green', 'Blue'],
+                        boundaryGap: true,
+                        nameGap: 30,
+                        splitArea: { show: false },
+                        splitLine: { show: false }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: 'Intensity (0-255)',
+                        min: 0,
+                        max: 255,
+                        splitArea: { show: true }
+                    },
+                    series: [{
+                        name: 'boxplot',
+                        type: 'boxplot',
+                        data: boxData,
+                        itemStyle: {
+                            color: '#b8c6db',
+                            borderColor: '#555'
+                        },
+                        tooltip: { formatter: function (param) {
+                            return [
+                                'Channel: ' + param.name,
+                                'Max: ' + param.data[5],
+                                'Q3: ' + param.data[4],
+                                'Median: ' + param.data[3],
+                                'Q1: ' + param.data[2],
+                                'Min: ' + param.data[1]
+                            ].join('<br/>');
+                        }}
+                    }]
+                });
+            }
+
+            charts.radar.setOption({
+                tooltip: { 
+                    confine: true
+                },
+                radar: {
+                    axisName: {
+                        formatter: function(value, indicator) {
+                            return value;
+                        }
+                    },
+                    indicator: [
+                        { name: '对比度 (Contrast)', max: 100 }, { name: '相关性 (Corr)', max: 1 },
+                        { name: '能量 (Energy)', max: 1 }, { name: '同质性 (Homo)', max: 1 }
+                    ],
+                    triggerEvent: true 
+                },
+                series: [{
+                    type: 'radar',
+                    tooltip:
+                    {
+                        trigger: 'item',
+                        backgroundColor: 'rgba(50, 50, 50, 0.9)',
+                        borderColor: '#777',
+                        borderWidth: 1,
+                        textStyle:
+                        {
+                            color: '#fff'
+                        },
+                        formatter: function(params)
+                        {
+                            let res = `<div style="font-weight:bold; font-size:14px; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.3); padding-bottom:6px;">${params.name}</div>`;
+                            const indicators = ['对比度', '相关性', '能量', '同质性'];
+                            const sub_indicators = ['Contrast', 'Correlation', 'Energy', 'Homogeneity'];
+                            
+                            res += '<table style="width:220px; border-collapse:collapse;">';
+                            params.value.forEach((val, idx) =>
+                            {
+                                res += `<tr>
+                                    <td style="padding:4px 0; color:#ccc; font-size:12px;">
+                                        <span style="color:#fff; font-weight:500;">${indicators[idx]}</span> 
+                                        <span style="font-size:11px; color:#aaa;">${sub_indicators[idx]}</span>
+                                    </td>
+                                    <td style="padding:4px 0; text-align:right; font-family:'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace; font-weight:bold; font-size:13px; color:#40c4ff;">
+                                        ${val.toFixed(4)}
+                                    </td>
+                                </tr>`;
+                            });
+                            res += '</table>';
+                            return res;
+                        }
+                    },
+                    label: {
+                        show: false,
+                        formatter: function(params) {
+                            return typeof params.value === 'number' ? params.value.toFixed(4) : params.value;
+                        },
+                        color: '#0071e3',
+                        fontSize: 11,
+                        fontWeight: 'bold',
+                        position: 'top',
+                        distance: 5
+                    },
+                    data: [{
+                        value: [d.texture_edge.glcm_contrast, d.texture_edge.glcm_correlation, d.texture_edge.glcm_energy, d.texture_edge.glcm_homogeneity],
+                        name: '纹理特征',
+                        itemStyle: { color: '#0071e3' },
+                        areaStyle: { color: 'rgba(0, 113, 227, 0.2)' }
+                    }]
+                }]
+            });
+
+            charts.edge.setOption({
+                tooltip: { trigger: 'item' },
+                series: [{
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+                    data: [
+                        { value: d.texture_edge.edge_dir_0_90_ratio, name: '0°-90°', itemStyle: { color: '#5e5ce6' } },
+                        { value: d.texture_edge.edge_dir_90_180_ratio, name: '90°-180°', itemStyle: { color: '#30b0c7' } },
+                        { value: 1 - d.texture_edge.edge_dir_0_90_ratio - d.texture_edge.edge_dir_90_180_ratio, name: '其他', itemStyle: { color: '#e5e5ea' } }
+                    ]
+                }]
+            });
+
+            const score = Math.min(100, (d.texture_edge.edge_pixel_ratio * 300 + d.texture_edge.glcm_contrast) / 2);
+            
+            charts.gauge.setOption({
+                series: [{
+                    type: 'gauge',
+                    startAngle: 180,
+                    endAngle: 0,
+                    min: 0,
+                    max: 100,
+                    splitNumber: 5,
+                    itemStyle: {
+                        color: '#58D9F9',
+                        shadowColor: 'rgba(0,138,255,0.45)',
+                        shadowBlur: 10,
+                        shadowOffsetX: 2,
+                        shadowOffsetY: 2
+                    },
+                    progress: { show: true, roundCap: true, width: 15 },
+                    pointer: { length: '60%', width: 5, itemStyle: { color: 'auto' } },
+                    axisLine: { roundCap: true, lineStyle: { width: 15 } },
+                    axisTick: { splitNumber: 2, lineStyle: { width: 2, color: '#999' } },
+                    splitLine: { length: 12, lineStyle: { width: 3, color: '#999' } },
+                    axisLabel: { distance: 20, color: '#999', fontSize: 14 },
+                    title: { show: false },
+                    detail: {
+                        backgroundColor: '#fff',
+                        borderColor: '#999',
+                        borderWidth: 2,
+                        width: '60%',
+                        lineHeight: 40,
+                        height: 40,
+                        borderRadius: 8,
+                        offsetCenter: [0, '35%'],
+                        valueAnimation: true,
+                        formatter: function (value) {
+                            return '{value|' + value.toFixed(0) + '}{unit|分}';
+                        },
+                        rich: {
+                            value: { fontSize: 30, fontWeight: 'bolder', color: '#777' },
+                            unit: { fontSize: 16, color: '#999', padding: [0, 0, -10, 10] }
+                        }
+                    },
+                    data: [{ value: score }]
+                }]
+            });
+
+            setTimeout(() => {
+                detailContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+
+        window.closeDetail = function() {
+            detailContainer.style.display = 'none';
+            resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        window.downloadReport = async function() {
+            const element = document.getElementById('detailContainer');
+            const controls = document.getElementById('detailControls');
+            const btn = controls.querySelector('.btn-primary');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span> 生成中...';
+            const tabsContainer = document.querySelector('.report-tabs');
+            const sections = document.querySelectorAll('.report-section');
+            const pdfTitles = document.querySelectorAll('.pdf-section-title');
+            const activeSection = document.querySelector('.report-section.active');
+            const activeTab = document.querySelector('.report-tab.active');
+
+            tabsContainer.style.display = 'none';
+            sections.forEach(s => s.style.display = 'block');
+            pdfTitles.forEach(t => t.style.display = 'block');
+
+            if (charts.radar) {
+                charts.radar.setOption({
+                    series: [{
+                        label: { show: true }
+                    }]
+                });
+            }
+
+            try {
+                await new Promise(r => setTimeout(r, 800));
+
+                const canvas = await html2canvas(element, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#f0f2f5',
+                    ignoreElements: (el) => el.id === 'detailControls'
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+
+                const { jsPDF } = window.jspdf;
+                const imgWidth = canvas.width;
+                const imgHeight = canvas.height;
+                const pdfWidth = 210;
+                const pdfHeight = (imgHeight * pdfWidth) / imgWidth;
+                
+                const pdf = new jsPDF('p', 'mm', [pdfWidth, pdfHeight]);
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                
+                const fileName = document.getElementById('detailFileName').textContent || 'analysis_report';
+                pdf.save(`AI_Visual_Report_${fileName}.pdf`);
+                
+            } catch (error) {
+                console.error(error);
+                alert('导出失败，请重试');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+
+                tabsContainer.style.removeProperty('display');
+
+                sections.forEach(s => {
+                    s.style.removeProperty('display');
+                    s.classList.remove('active');
+                });
+
+                pdfTitles.forEach(t => t.style.display = 'none');
+
+                if (activeSection && activeSection.id) {
+                    document.getElementById(activeSection.id).classList.add('active');
+                    document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
+                    if (activeTab) {
+                        activeTab.classList.add('active');
+                    } else {
+
+                        const targetId = activeSection.id.replace('report-', '');
+                        const targetTab = document.querySelector(`.report-tab[onclick*="${targetId}"]`);
+                        if(targetTab) targetTab.classList.add('active');
+                    }
+                } else {
+
+                    document.getElementById('report-color').classList.add('active');
+                    document.querySelector('.report-tab').classList.add('active');
+                }
+
+                if (charts.radar) {
+                    charts.radar.setOption({
+                        series: [{
+                            label: { show: false }
+                        }]
+                    });
+                }
+            }
+        }
+
+        const emojis = ['🎨', '🌈', '👁️', '📷', '✨', '🧬', '🎲', '💡', '📐', '🖼️'];
+        function createFloater() {
+            const floater = document.createElement('div');
+            floater.className = 'emoji-floater';
+            floater.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+
+            const left = Math.random() * 100;
+            const duration = 15 + Math.random() * 20;
+            const delay = Math.random() * 5;
+            const size = 20 + Math.random() * 30;
+            
+            floater.style.left = `${left}vw`;
+            floater.style.animationDuration = `${duration}s`;
+            floater.style.animationDelay = `${delay}s`;
+            floater.style.fontSize = `${size}px`;
+            
+            document.body.appendChild(floater);
+
+            setTimeout(() => floater.remove(), (duration + delay) * 1000);
+        }
+
+        for(let i=0; i<15; i++) createFloater();
+        setInterval(createFloater, 2000);
+
+        const trivias = [
+            "人眼能分辨约 1000 万种颜色，而普通的 24 位色深图片包含 1677 万种颜色。",
+            "第一张数码照片诞生于 1957 年，比数码相机发明还早 20 年。",
+            "JPEG 压缩算法会丢弃人眼不敏感的高频色彩信息，从而大幅减小体积。",
+            "著名的 'Lenna' 测试图截取自 1972 年的《花花公子》杂志。",
+            "计算机视觉中的 RGB 颜色模型是加色模式，类似于光的混合。",
+            "OpenCV 的全称是 Open Source Computer Vision Library，由 Intel 发起。",
+            "直方图均衡化可以增强图片的对比度，让细节更清晰。",
+            "PNG 格式支持透明通道 (Alpha Channel)，而 JPG 不支持。",
+            "纹理特征分析中的 GLCM 代表灰度共生矩阵。",
+            "卷积神经网络（CNN）的灵感来源于猫脑视觉皮层的神经元结构。",
+            "二值图像的像素值只有两种状态（0 或 255），存储空间远小于灰度图。",
+            "SIFT 特征算子具有尺度不变性，即使图片放大缩小也能精准匹配。",
+            "人类视觉系统的视锥细胞主要分布在视网膜中央，负责分辨色彩细节。",
+            "OpenCV 支持跨平台开发，可在 Windows、Linux、Android 等系统运行。",
+            "形态学操作中的 '腐蚀' 可以消除小的亮斑，'膨胀' 则能填补暗区域孔洞。",
+            "首个商用人脸识别系统于 1990 年推出，主要应用于机场安检领域。",
+            "LAB 颜色模型将亮度与色彩分离，更符合人类对颜色的感知规律。",
+            "霍夫变换可以在图像中检测出直线、圆等规则几何形状。",
+            "YOLO 算法的全称是 You Only Look Once，实现了实时目标检测。",
+            "灰度图像的每个像素仅用 8 位表示，最多可呈现 256 种灰度等级。",
+            "计算机视觉中的 '掩膜（Mask）' 本质是一个与原图尺寸相同的二值矩阵。",
+            "Canny 边缘检测算法分为四步：高斯滤波、梯度计算、非极大值抑制、双阈值检测。",
+            "TIFF 格式支持无损压缩，常用于专业印刷和图像存档。",
+            "光流法可以通过相邻帧的像素变化，计算物体的运动速度和方向。",
+            "边缘检测中的 Sobel 算子分为 x 方向和 y 方向，分别检测垂直与水平边缘。",
+            "深度学习框架 TensorFlow 内置的 tf.image 模块可直接实现图像裁剪、翻转等预处理。",
+            "1966 年人工智能先驱马文・明斯基提出的 “夏季视觉项目”，被视为计算机视觉的开端。",
+            "HSV 颜色模型用色调（Hue）、饱和度（Saturation）、明度（Value）描述色彩，更贴近人眼直观感受。",
+            "图像金字塔中的 '下采样' 会逐次缩小图像尺寸，'上采样' 则通过插值恢复细节。",
+            "SSD（Single Shot MultiBox Detector）算法兼顾目标检测的速度与精度，适合实时场景。",
+            "傅里叶变换可将图像从空间域转换到频率域，便于处理噪声去除、特征提取等任务。",
+            "常见的图像插值算法中，双线性插值比最近邻插值的放大效果更平滑、无锯齿。",
+            "人脸检测中的 Haar 级联分类器，是基于 AdaBoost 算法训练的经典特征检测器。",
+            "图像噪声中，椒盐噪声表现为随机的黑白斑点，高斯噪声则呈正态分布。",
+            "ResNet 通过引入残差连接解决了深度神经网络的梯度消失问题，推动了视觉模型的深度突破。",
+            "BMP 格式是 Windows 系统的标准位图格式，通常采用无损存储，文件体积较大。",
+            "语义分割任务的目标是为图像中每个像素分配类别标签，实现像素级的场景理解。",
+            "SURF 特征算子是 SIFT 的优化版本，通过引入积分图大幅提升了计算速度。",
+            "视网膜成像存在 '盲点'，但人脑会自动填补缺失信息，这一机制启发了图像修复算法。",
+            "首个基于机器视觉的工业检测系统诞生于 20 世纪 70 年代的汽车行业。",
+            "图像滤波中的高斯滤波是线性平滑滤波，能有效抑制高斯噪声。",
+            "语义分割模型 U-Net 的网络结构呈对称的 'U' 型，专为医学影像分割设计。",
+            "8 位彩色图像的颜色总数为 256 种，远少于 24 位真彩色图像。",
+            "角点检测中的 Harris 算子具有旋转不变性，但不具备尺度不变性。",
+            "PyTorch 中的 torchvision 库提供了大量预训练的计算机视觉模型。",
+            "图像形态学操作的基础是腐蚀和膨胀，开运算和闭运算由两者组合而成。",
+            "1973 年诞生的 Marr 视觉理论，首次系统地提出了计算机视觉的分层框架。",
+            "全景图像拼接的核心步骤是特征点匹配与图像配准，实现无缝衔接。",
+            "目标跟踪算法 KCF 全称为 Kernelized Correlation Filters，适合实时跟踪场景。",
+            "位图与矢量图的本质区别在于，位图放大会失真，矢量图则不会。",
+            "颜色空间转换中，RGB 转 YUV 的目的是为了兼容黑白电视信号。",
+            "边缘检测中的 Laplacian 算子是二阶微分算子，对噪声较为敏感。",
+            "深度学习中的迁移学习，可让预训练视觉模型快速适配新的小数据集任务。",
+            "GIF 格式支持动态图像，但最多只能显示 256 种颜色。",
+            "立体视觉技术通过模拟人眼双目视差，可计算出图像中物体的三维深度信息。",
+            "图像阈值分割中的大津法（OTSU）能自动计算最佳二值化阈值。",
+            "OpenCV 的 imread 函数默认读取的图像格式为 BMP，而非 RGB。",
+            "视觉注意力机制的灵感来源于人类视觉的选择性关注特性，可聚焦关键区域。",
+            "遥感图像解译是计算机视觉在地理信息领域的典型应用，用于土地监测等任务。",
+            "点击这个页脚可以刷新一条新的冷知识哦！"
+        ];
+
+        function refreshTrivia() {
+            const text = trivias[Math.floor(Math.random() * trivias.length)];
+            const el = document.getElementById('triviaText');
+            el.style.opacity = 0;
+            setTimeout(() => {
+                el.textContent = text;
+                el.style.opacity = 1;
+            }, 300);
+        }
+
+        refreshTrivia();
+
+        const text = "探索每一张图片的像素基因。从颜色分布到纹理细节，为您呈现最精准的数据洞察。";
+        const subtitleEl = document.getElementById('typingSubtitle');
+        let i = 0;
+        
+        function typeWriter() {
+            if (i < text.length) {
+                subtitleEl.innerHTML += text.charAt(i);
+                i++;
+                setTimeout(typeWriter, 50);
+            }
+        }
+
+        setTimeout(typeWriter, 500);
+
+        document.addEventListener('mousemove', (e) => {
+            const container = e.target.closest('.image-container');
+            if (container) {
+                const rect = container.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                container.style.setProperty('--cursor-x', `${x}px`);
+                container.style.setProperty('--cursor-y', `${y}px`);
+            }
+        });
+    </script>
+</body>
+</html>
